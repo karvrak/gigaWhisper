@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:modal.com)",
+      "WebFetch(domain:superwhisper.com)",
+      "Bash(dir:*)",
+      "Bash(where rustc)",
+      "Bash(where cargo:*)",
+      "Bash(pnpm tauri dev:*)",
+      "Bash(cargo check:*)",
+      "Bash(echo:*)",
+      "Bash(taskkill:*)",
+      "Bash(pkill:*)",
+      "Bash(cmd.exe /c \"taskkill /F /IM node.exe\")",
+      "Bash(npm run check:*)",
+      "Bash(npm run build)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run tauri:*)",
+      "mcp__ide__getDiagnostics"
+    ]
+  }
+}

@@ -1,0 +1,197 @@
+/* Recording Indicator Window Styles */
+
+/* Ensure full transparency */
+html, body, #root {
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+}
+
+.recording-indicator-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  -webkit-app-region: drag;
+}
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+/* Recording dot with pulse animation */
+.recording-dot-container {
+  position: relative;
+  width: 12px;
+  height: 12px;
+}
+
+.recording-dot {
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.recording-dot-pulse {
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: pulse 1.5s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Waveform animation */
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 32px;
+}
+
+.waveform-bar {
+  width: 4px;
+  height: 8px;
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+  border-radius: 2px;
+  animation: wave 0.8s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% {
+    height: 8px;
+  }
+  50% {
+    height: 28px;
+  }
+}
+
+/* Stagger the animation for each bar */
+.waveform-bar:nth-child(1) { animation-delay: 0s; }
+.waveform-bar:nth-child(2) { animation-delay: 0.1s; }
+.waveform-bar:nth-child(3) { animation-delay: 0.15s; }
+.waveform-bar:nth-child(4) { animation-delay: 0.2s; }
+.waveform-bar:nth-child(5) { animation-delay: 0.25s; }
+.waveform-bar:nth-child(6) { animation-delay: 0.3s; }
+.waveform-bar:nth-child(7) { animation-delay: 0.35s; }
+.waveform-bar:nth-child(8) { animation-delay: 0.3s; }
+.waveform-bar:nth-child(9) { animation-delay: 0.25s; }
+.waveform-bar:nth-child(10) { animation-delay: 0.2s; }
+.waveform-bar:nth-child(11) { animation-delay: 0.15s; }
+.waveform-bar:nth-child(12) { animation-delay: 0.1s; }
+
+/* Duration display */
+.recording-duration {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  min-width: 45px;
+  text-align: right;
+}
+
+/* Processing state */
+.processing-spinner {
+  width: 20px;
+  height: 20px;
+  color: #60a5fa;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Processing state - Green theme */
+.processing-dot-container {
+  position: relative;
+  width: 12px;
+  height: 12px;
+}
+
+.processing-dot {
+  width: 12px;
+  height: 12px;
+  background: #22c55e;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.processing-dot-pulse {
+  width: 12px;
+  height: 12px;
+  background: #22c55e;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: processing-pulse 1s ease-out infinite;
+}
+
+@keyframes processing-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Processing waveform - green bars with flowing animation */
+.processing-waveform .processing-bar {
+  background: linear-gradient(180deg, #22c55e 0%, #4ade80 100%);
+  animation: processing-wave 1.2s ease-in-out infinite;
+}
+
+@keyframes processing-wave {
+  0%, 100% {
+    height: 12px;
+    opacity: 0.6;
+  }
+  50% {
+    height: 24px;
+    opacity: 1;
+  }
+}
+
+.processing-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+}

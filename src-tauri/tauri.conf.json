@@ -1,0 +1,104 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "GigaWhisper",
+  "version": "0.1.0",
+  "identifier": "com.gigawhisper.app",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "GigaWhisper",
+        "label": "main",
+        "width": 400,
+        "height": 600,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": false,
+        "visible": false,
+        "center": true,
+        "minWidth": 350,
+        "minHeight": 500,
+        "skipTaskbar": true
+      },
+      {
+        "title": "Recording",
+        "label": "recording-indicator",
+        "width": 280,
+        "height": 70,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "visible": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "x": 820,
+        "y": 50
+      },
+      {
+        "title": "Transcription",
+        "label": "popup",
+        "width": 400,
+        "height": 200,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": false,
+        "visible": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "center": true
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.ico",
+      "iconAsTemplate": false
+    },
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "language": "en-US"
+      },
+      "nsis": {
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "languages": ["English"],
+        "template": null
+      }
+    },
+    "shortDescription": "Voice transcription made simple",
+    "longDescription": "GigaWhisper is an open-source voice transcription application that lets you dictate text into any application using local AI (whisper.cpp) or cloud services (Groq API).",
+    "category": "Productivity",
+    "publisher": "GigaWhisper"
+  },
+  "plugins": {
+    "global-shortcut": null,
+    "clipboard-manager": null,
+    "notification": null,
+    "shell": {
+      "open": true
+    }
+  }
+}

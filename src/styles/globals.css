@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hide scrollbars on main window */
+html, body {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Allow scrolling in main content area only */
+main {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Hide scrollbar but keep functionality */
+main::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Custom scrollbar for other elements that need it */
+.scrollable::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollable::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+.scrollable::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Focus styles */
+*:focus {
+  @apply outline-none;
+}
+
+*:focus-visible {
+  @apply ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900;
+}
+
+/* Animations */
+@keyframes pulse-recording {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-recording {
+  animation: pulse-recording 1s ease-in-out infinite;
+}
+
+/* Dark mode transition */
+html {
+  transition: background-color 0.3s ease;
+}
+
+/* Prevent text selection on buttons */
+button {
+  user-select: none;
+}
+
+/* Custom checkbox styling */
+input[type="checkbox"] {
+  @apply w-4 h-4 rounded border-gray-300 dark:border-gray-600;
+  @apply focus:ring-blue-500 focus:ring-offset-0;
+}
+
+input[type="checkbox"]:checked {
+  @apply bg-blue-600 border-blue-600;
+}
+
+/* Custom radio styling */
+input[type="radio"] {
+  @apply w-4 h-4 border-gray-300 dark:border-gray-600;
+  @apply focus:ring-blue-500 focus:ring-offset-0;
+}
+
+input[type="radio"]:checked {
+  @apply bg-blue-600 border-blue-600;
+}
+
+/* Kbd styling */
+kbd {
+  @apply font-mono text-sm;
+  @apply bg-gray-100 dark:bg-gray-800;
+  @apply border border-gray-300 dark:border-gray-600;
+  @apply rounded px-2 py-1;
+  @apply shadow-sm;
+}
