@@ -15,7 +15,7 @@ Open-source voice transcription for Windows. A SuperWhisper alternative built wi
 
 ### From Release
 
-Download the latest installer from [Releases](https://github.com/yourusername/gigawhisper/releases).
+Download the latest installer from [Releases](https://github.com/karvrak/gigaWhisper/releases).
 
 ### Build from Source
 
@@ -29,7 +29,7 @@ Download the latest installer from [Releases](https://github.com/yourusername/gi
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/gigawhisper.git
+git clone https://github.com/karvrak/gigaWhisper.git
 cd gigawhisper
 
 # Install frontend dependencies

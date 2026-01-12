@@ -6,14 +6,14 @@ First off, thanks for taking the time to contribute!
 
 ### Reporting Bugs
 
-- Use the [Bug Report](https://github.com/YOUR_USERNAME/gigawhisper/issues/new?template=bug_report.yml) template
+- Use the [Bug Report](https://github.com/karvrak/gigaWhisper/issues/new?template=bug_report.yml) template
 - Include your GigaWhisper version and Windows version
 - Describe the steps to reproduce the issue
 - Include relevant logs if available
 
 ### Suggesting Features
 
-- Use the [Feature Request](https://github.com/YOUR_USERNAME/gigawhisper/issues/new?template=feature_request.yml) template
+- Use the [Feature Request](https://github.com/karvrak/gigaWhisper/issues/new?template=feature_request.yml) template
 - Explain the problem you're trying to solve
 - Describe your proposed solution
 
@@ -40,7 +40,7 @@ First off, thanks for taking the time to contribute!
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/gigawhisper.git
+git clone https://github.com/karvrak/gigaWhisper.git
 cd gigawhisper
 
 # Install dependencies
@@ -96,4 +96,4 @@ Major architectural decisions are documented as ADRs in the `docs/ADR/` folder. 
 
 ## Questions?
 
-Feel free to open a [Discussion](https://github.com/YOUR_USERNAME/gigawhisper/discussions) for any questions!
+Feel free to open a [Discussion](https://github.com/karvrak/gigaWhisper/discussions) for any questions!
