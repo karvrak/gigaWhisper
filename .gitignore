@@ -5,7 +5,7 @@ node_modules/
 # Build outputs
 dist/
 target/
-
+docs/
 # Tauri
 src-tauri/target/
 
