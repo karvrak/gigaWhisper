@@ -1,10 +1,165 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useSettings } from '../hooks/useSettings';
 import { HotkeyInput } from './HotkeyInput';
 import { ModelSelector } from './ModelSelector';
 import { ProviderToggle } from './ProviderToggle';
-import { Sun, Moon, Monitor } from 'lucide-react';
+import { Sun, Moon, Monitor, Eye, EyeOff, Check, X, Loader2 } from 'lucide-react';
+
+// Separate component for Groq API Key management (uses secure storage)
+function GroqApiKeyInput() {
+  const [apiKey, setApiKey] = useState('');
+  const [hasKey, setHasKey] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Check if API key is already configured
+  useEffect(() => {
+    const checkApiKey = async () => {
+      try {
+        const exists = await invoke<boolean>('has_groq_api_key');
+        setHasKey(exists);
+      } catch (e) {
+        console.error('Failed to check API key:', e);
+      }
+    };
+    checkApiKey();
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!apiKey.trim()) {
+      setError('API key cannot be empty');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      // Validate the key format first
+      await invoke('validate_groq_api_key', { apiKey: apiKey.trim() });
+      // Save the key securely
+      await invoke('set_groq_api_key', { apiKey: apiKey.trim() });
+      setHasKey(true);
+      setIsEditing(false);
+      setApiKey('');
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setSaving(false);
+    }
+  }, [apiKey]);
+
+  const handleClear = useCallback(async () => {
+    setSaving(true);
+    setError(null);
+
+    try {
+      await invoke('clear_groq_api_key');
+      setHasKey(false);
+      setApiKey('');
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    setIsEditing(false);
+    setApiKey('');
+    setError(null);
+  }, []);
+
+  if (hasKey && !isEditing) {
+    return (
+      <div>
+        <label className="block text-sm font-medium mb-2">Groq API Key</label>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono text-sm">
+            ****************************************
+          </div>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="px-3 py-2 text-sm text-blue-600 hover:text-blue-700 border border-blue-300 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          >
+            Change
+          </button>
+          <button
+            onClick={handleClear}
+            disabled={saving}
+            className="px-3 py-2 text-sm text-red-600 hover:text-red-700 border border-red-300 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Remove'}
+          </button>
+        </div>
+        <p className="mt-1 text-sm text-green-600 dark:text-green-400">
+          API key configured and stored securely
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-2">Groq API Key</label>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <input
+            type={showKey ? 'text' : 'password'}
+            value={apiKey}
+            onChange={(e) => {
+              setApiKey(e.target.value);
+              setError(null);
+            }}
+            placeholder="gsk_..."
+            className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey(!showKey)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving || !apiKey.trim()}
+          className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          Save
+        </button>
+        {isEditing && (
+          <button
+            onClick={handleCancel}
+            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      {error && (
+        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
+      )}
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Get your API key from{' '}
+        <a
+          href="https://console.groq.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          console.groq.com
+        </a>
+        . Keys are stored securely in your system's credential manager.
+      </p>
+    </div>
+  );
+}
 
 interface AudioDevice {
   name: string;
@@ -283,54 +438,55 @@ export function SettingsPanel() {
 
             {/* Local Settings */}
             {settings.transcription.provider === 'local' && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Whisper Model</label>
-                <ModelSelector
-                  value={settings.transcription.local.model}
-                  onChange={(model) =>
-                    updateSettings({
-                      ...settings,
-                      transcription: {
-                        ...settings.transcription,
-                        local: { ...settings.transcription.local, model },
-                      },
-                    })
-                  }
-                />
-              </div>
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Whisper Model</label>
+                  <ModelSelector
+                    value={settings.transcription.local.model}
+                    onChange={(model) =>
+                      updateSettings({
+                        ...settings,
+                        transcription: {
+                          ...settings.transcription,
+                          local: { ...settings.transcription.local, model },
+                        },
+                      })
+                    }
+                  />
+                </div>
+
+                {/* GPU Acceleration Toggle */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="gpu-enabled"
+                    checked={settings.transcription.local.gpu_enabled}
+                    onChange={(e) =>
+                      updateSettings({
+                        ...settings,
+                        transcription: {
+                          ...settings.transcription,
+                          local: { ...settings.transcription.local, gpu_enabled: e.target.checked },
+                        },
+                      })
+                    }
+                    className="rounded text-blue-600 mt-0.5"
+                  />
+                  <div>
+                    <label htmlFor="gpu-enabled" className="font-medium text-sm cursor-pointer">
+                      GPU Acceleration
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Use your graphics card for faster transcription (requires compatible GPU)
+                    </p>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Groq Settings */}
             {settings.transcription.provider === 'groq' && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Groq API Key</label>
-                <input
-                  type="password"
-                  value={settings.transcription.groq.api_key}
-                  onChange={(e) =>
-                    updateSettings({
-                      ...settings,
-                      transcription: {
-                        ...settings.transcription,
-                        groq: { ...settings.transcription.groq, api_key: e.target.value },
-                      },
-                    })
-                  }
-                  placeholder="gsk_..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Get your API key from{' '}
-                  <a
-                    href="https://console.groq.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    console.groq.com
-                  </a>
-                </p>
-              </div>
+              <GroqApiKeyInput />
             )}
           </>
         )}

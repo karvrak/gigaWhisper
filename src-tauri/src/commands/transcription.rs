@@ -2,9 +2,21 @@
 //!
 //! Handle transcription status and results.
 
-use crate::transcription::TranscriptionStatus;
+use crate::transcription::{TranscriptionStatus, WhisperProvider};
 use crate::AppState;
+use serde::Serialize;
 use tauri::State;
+
+/// GPU acceleration information
+#[derive(Debug, Clone, Serialize)]
+pub struct GpuInfo {
+    /// Whether GPU acceleration is available in this build
+    pub available: bool,
+    /// Name of the GPU backend (CUDA, Vulkan, or None)
+    pub backend: String,
+    /// Whether GPU is currently enabled in settings
+    pub enabled: bool,
+}
 
 /// Get transcription status
 #[tauri::command]
@@ -28,4 +40,15 @@ pub async fn preload_model(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 pub fn unload_model(state: State<'_, AppState>) {
     state.transcription_service.unload_model();
+}
+
+/// Get GPU acceleration information
+#[tauri::command]
+pub fn get_gpu_info(state: State<'_, AppState>) -> GpuInfo {
+    let config = state.config.read();
+    GpuInfo {
+        available: WhisperProvider::is_gpu_available(),
+        backend: WhisperProvider::gpu_backend_name().to_string(),
+        enabled: config.transcription.local.gpu_enabled,
+    }
 }

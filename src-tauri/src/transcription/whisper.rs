@@ -1,6 +1,7 @@
 //! Whisper.cpp Provider
 //!
 //! Local transcription using whisper-rs bindings.
+//! Supports GPU acceleration via Vulkan (AMD/Intel/NVIDIA) or CUDA (NVIDIA).
 
 use super::{TranscriptionConfig, TranscriptionError, TranscriptionProvider, TranscriptionResult};
 use async_trait::async_trait;
@@ -14,6 +15,7 @@ pub struct WhisperProvider {
     model_path: PathBuf,
     context: Arc<Mutex<Option<whisper_rs::WhisperContext>>>,
     threads: usize,
+    gpu_enabled: bool,
 }
 
 impl WhisperProvider {
@@ -23,6 +25,38 @@ impl WhisperProvider {
             model_path,
             context: Arc::new(Mutex::new(None)),
             threads,
+            gpu_enabled: false,
+        }
+    }
+
+    /// Create a new Whisper provider with GPU acceleration
+    pub fn with_gpu(model_path: PathBuf, threads: usize, gpu_enabled: bool) -> Self {
+        Self {
+            model_path,
+            context: Arc::new(Mutex::new(None)),
+            threads,
+            gpu_enabled,
+        }
+    }
+
+    /// Check if GPU acceleration is available in this build
+    pub fn is_gpu_available() -> bool {
+        cfg!(any(feature = "gpu-vulkan", feature = "gpu-cuda"))
+    }
+
+    /// Get the GPU backend name if available
+    pub fn gpu_backend_name() -> &'static str {
+        #[cfg(feature = "gpu-cuda")]
+        {
+            "CUDA"
+        }
+        #[cfg(all(feature = "gpu-vulkan", not(feature = "gpu-cuda")))]
+        {
+            "Vulkan"
+        }
+        #[cfg(not(any(feature = "gpu-vulkan", feature = "gpu-cuda")))]
+        {
+            "None"
         }
     }
 
@@ -39,14 +73,32 @@ impl WhisperProvider {
             return Ok(());
         }
 
+        // Configure GPU acceleration if enabled and available
+        let mut params = whisper_rs::WhisperContextParameters::default();
+
+        let use_gpu = self.gpu_enabled && Self::is_gpu_available();
+        if use_gpu {
+            params.use_gpu(true);
+            tracing::info!("GPU acceleration enabled: {}", Self::gpu_backend_name());
+        } else if self.gpu_enabled {
+            tracing::warn!(
+                "GPU requested but not available in this build. \
+                Compile with --features gpu-vulkan (AMD/Intel) or --features gpu-cuda (NVIDIA)"
+            );
+        }
+
         let ctx = whisper_rs::WhisperContext::new_with_params(
             self.model_path.to_str().unwrap(),
-            whisper_rs::WhisperContextParameters::default(),
+            params,
         )
         .map_err(|e| TranscriptionError::Failed(e.to_string()))?;
 
         *self.context.lock() = Some(ctx);
-        tracing::info!("Whisper model loaded: {:?}", self.model_path);
+        tracing::info!(
+            "Whisper model loaded: {:?} (GPU: {})",
+            self.model_path,
+            if use_gpu { "enabled" } else { "disabled" }
+        );
 
         Ok(())
     }
@@ -133,6 +185,7 @@ impl Clone for WhisperProvider {
             model_path: self.model_path.clone(),
             context: self.context.clone(),
             threads: self.threads,
+            gpu_enabled: self.gpu_enabled,
         }
     }
 }

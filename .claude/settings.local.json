@@ -20,7 +20,9 @@
       "Bash(npx tsc:*)",
       "Bash(npm run tauri:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(gh auth status:*)"
+      "Bash(gh auth status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Add GPU acceleration support \\(Vulkan/CUDA\\) v0.2.0\n\n- Add Vulkan backend support for AMD/Intel/NVIDIA GPUs\n- Add CUDA backend support for NVIDIA GPUs \\(optional\\)\n- Add GPU settings in config \\(gpu_enabled, gpu_backend\\)\n- Add GPU toggle in Settings UI\n- Add get_gpu_info Tauri command for runtime GPU detection\n- Update whisper-rs to 0.14 for Vulkan SDK 1.4 compatibility\n- Add build script for GPU variants \\(scripts/build-gpu.ps1\\)\n- Add GPU setup documentation \\(docs/GPU_SETUP.md\\)\n\nBuild with: cargo build --features gpu-vulkan \\(AMD/Intel/NVIDIA\\)\nBuild with: cargo build --features gpu-cuda \\(NVIDIA only\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

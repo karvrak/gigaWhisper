@@ -36,6 +36,9 @@ pub enum DownloadError {
 
     #[error("Download cancelled")]
     Cancelled,
+
+    #[error("Insufficient disk space: need {needed} bytes, have {available} bytes")]
+    InsufficientSpace { needed: u64, available: u64 },
 }
 
 /// Cancellation token for downloads
@@ -143,6 +146,38 @@ pub async fn download_model(
     result
 }
 
+/// Check available disk space at the given path
+#[cfg(windows)]
+fn get_available_space(path: &std::path::Path) -> Option<u64> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+    use windows::core::PCWSTR;
+
+    let path_str: Vec<u16> = path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+
+    unsafe {
+        let mut free_bytes_available: u64 = 0;
+        let mut total_bytes: u64 = 0;
+        let mut total_free_bytes: u64 = 0;
+
+        if GetDiskFreeSpaceExW(
+            PCWSTR(path_str.as_ptr()),
+            Some(&mut free_bytes_available),
+            Some(&mut total_bytes),
+            Some(&mut total_free_bytes),
+        ).is_ok() {
+            Some(free_bytes_available)
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn get_available_space(_path: &std::path::Path) -> Option<u64> {
+    None
+}
+
 /// Internal download implementation with cancellation
 async fn download_model_internal(
     model: &WhisperModel,
@@ -152,6 +187,20 @@ async fn download_model_internal(
 ) -> Result<PathBuf, DownloadError> {
     // Ensure directory exists
     tokio::fs::create_dir_all(&dest_dir).await?;
+
+    // Check disk space before downloading
+    let model_size = model.size_bytes();
+    if let Some(available) = get_available_space(&dest_dir) {
+        // Need extra 10% buffer for safety
+        let needed = (model_size as f64 * 1.1) as u64;
+        if available < needed {
+            return Err(DownloadError::InsufficientSpace {
+                needed,
+                available,
+            });
+        }
+        tracing::info!("Disk space check passed: {} bytes available, {} bytes needed", available, needed);
+    }
 
     let filename = model.filename();
     let url = format!("{}/{}", MODEL_BASE_URL, filename);

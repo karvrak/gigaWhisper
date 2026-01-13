@@ -122,6 +122,7 @@ pub fn run() {
             commands::transcription::get_transcription_status,
             commands::transcription::preload_model,
             commands::transcription::unload_model,
+            commands::transcription::get_gpu_info,
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::get_audio_devices,

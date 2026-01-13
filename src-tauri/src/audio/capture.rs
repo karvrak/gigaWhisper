@@ -38,6 +38,13 @@ enum AudioCommand {
     Shutdown,
 }
 
+/// Stream error that occurred during recording
+#[derive(Debug, Clone)]
+pub struct StreamError {
+    pub message: String,
+    pub is_disconnection: bool,
+}
+
 /// Audio capture handle (Send + Sync safe)
 ///
 /// All fields are wrapped in thread-safe containers to ensure proper
@@ -52,6 +59,8 @@ pub struct AudioCapture {
     config: AudioConfig,
     /// Actual sample rate of the device (may differ from config)
     device_sample_rate: u32,
+    /// Last stream error (if any)
+    last_error: Arc<Mutex<Option<StreamError>>>,
 }
 
 // AudioCapture is now automatically Send + Sync because:
@@ -131,6 +140,7 @@ impl AudioCapture {
         tracing::info!("Audio buffer size: {}s ({} samples)", buffer_seconds, buffer_samples);
         let buffer = Arc::new(Mutex::new(RingBuffer::new(buffer_samples)));
         let is_recording = Arc::new(Mutex::new(false));
+        let last_error: Arc<Mutex<Option<StreamError>>> = Arc::new(Mutex::new(None));
 
         // Create channel for commands
         let (command_tx, command_rx) = mpsc::channel::<AudioCommand>();
@@ -138,6 +148,7 @@ impl AudioCapture {
         // Clone references for the worker thread
         let buffer_clone = buffer.clone();
         let is_recording_clone = is_recording.clone();
+        let last_error_clone = last_error.clone();
         let channels = device_config.channels as usize;
 
         // Spawn worker thread that owns the device and stream
@@ -151,8 +162,13 @@ impl AudioCapture {
                             continue; // Already recording
                         }
 
+                        // Clear any previous error
+                        *last_error_clone.lock() = None;
+
                         let buffer_for_callback = buffer_clone.clone();
                         let channels_for_callback = channels;
+                        let error_for_callback = last_error_clone.clone();
+                        let is_recording_for_error = is_recording_clone.clone();
 
                         match device.build_input_stream(
                             &device_config,
@@ -171,8 +187,27 @@ impl AudioCapture {
                                 let mut buf = buffer_for_callback.lock();
                                 buf.write(&mono);
                             },
-                            |err| {
-                                tracing::error!("Audio stream error: {}", err);
+                            move |err| {
+                                let error_msg = err.to_string();
+                                tracing::error!("Audio stream error: {}", error_msg);
+
+                                // Detect disconnection errors
+                                let is_disconnection = error_msg.contains("disconnected")
+                                    || error_msg.contains("device")
+                                    || error_msg.contains("DeviceNotAvailable")
+                                    || error_msg.contains("lost")
+                                    || error_msg.contains("InvalidDevice");
+
+                                // Store the error
+                                *error_for_callback.lock() = Some(StreamError {
+                                    message: error_msg,
+                                    is_disconnection,
+                                });
+
+                                // Mark as no longer recording on critical errors
+                                if is_disconnection {
+                                    *is_recording_for_error.lock() = false;
+                                }
                             },
                             None,
                         ) {
@@ -185,6 +220,10 @@ impl AudioCapture {
                             }
                             Err(e) => {
                                 tracing::error!("Failed to build audio stream: {}", e);
+                                *last_error_clone.lock() = Some(StreamError {
+                                    message: e.to_string(),
+                                    is_disconnection: true,
+                                });
                             }
                         }
                     }
@@ -208,6 +247,7 @@ impl AudioCapture {
             worker_handle: Mutex::new(Some(worker_handle)),
             is_recording,
             config,
+            last_error,
             device_sample_rate,
         })
     }
@@ -289,6 +329,21 @@ impl AudioCapture {
     /// Get the actual device sample rate
     pub fn device_sample_rate(&self) -> u32 {
         self.device_sample_rate
+    }
+
+    /// Check if there was a stream error (e.g., microphone disconnected)
+    pub fn has_error(&self) -> bool {
+        self.last_error.lock().is_some()
+    }
+
+    /// Get the last stream error, if any
+    pub fn get_error(&self) -> Option<StreamError> {
+        self.last_error.lock().clone()
+    }
+
+    /// Clear the last error
+    pub fn clear_error(&self) {
+        *self.last_error.lock() = None;
     }
 }
 

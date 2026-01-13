@@ -13,15 +13,22 @@ pub fn register_shortcuts(app: &tauri::App) -> Result<(), Box<dyn std::error::Er
     let config = state.config.read();
 
     // Parse shortcut from config
-    let record_shortcut: Shortcut = config.shortcuts.record.parse()?;
+    let record_shortcut: Shortcut = config.shortcuts.record.parse().map_err(|e| {
+        tracing::error!("Failed to parse shortcut '{}': {}", config.shortcuts.record, e);
+        e
+    })?;
 
     // Register the shortcut
     app.global_shortcut()
-        .on_shortcut(record_shortcut, move |app, shortcut, event| {
+        .on_shortcut(record_shortcut.clone(), move |app, shortcut, event| {
             handle_record_shortcut(app, shortcut, event.state);
+        })
+        .map_err(|e| {
+            tracing::error!("Failed to register shortcut {:?}: {}", record_shortcut, e);
+            e
         })?;
 
-    tracing::info!("Global shortcuts registered");
+    tracing::info!("Global shortcut registered: {:?}", record_shortcut);
     Ok(())
 }
 
@@ -188,6 +195,8 @@ async fn start_recording_internal(app: &AppHandle) -> Result<(), String> {
 
 /// Internal function to stop recording and transcribe
 async fn stop_recording_internal(app: &AppHandle) -> Result<String, String> {
+    use tauri_plugin_notification::NotificationExt;
+
     let state = app.state::<AppState>();
 
     tracing::info!("Stopping recording via shortcut");
@@ -195,16 +204,19 @@ async fn stop_recording_internal(app: &AppHandle) -> Result<String, String> {
     // Switch indicator to processing state
     show_processing_indicator(app);
 
-    // Get audio samples
-    let (raw_samples, device_sample_rate) = {
+    // Get audio samples and check for errors
+    let (raw_samples, device_sample_rate, stream_error) = {
         let mut capture_guard = state.audio_capture.lock();
         match capture_guard.as_ref() {
             Some(capture) => {
+                // Check for stream errors (e.g., microphone disconnection)
+                let stream_error = capture.get_error();
+
                 let result = capture
                     .stop()
                     .map_err(|e| format!("Failed to stop audio: {}", e))?;
                 *capture_guard = None;
-                result
+                (result.0, result.1, stream_error)
             }
             None => {
                 hide_recording_indicator(app);
@@ -212,6 +224,30 @@ async fn stop_recording_internal(app: &AppHandle) -> Result<String, String> {
             }
         }
     };
+
+    // Handle microphone disconnection or other stream errors
+    if let Some(error) = stream_error {
+        tracing::warn!("Stream error detected during recording: {}", error.message);
+
+        if error.is_disconnection {
+            // Notify user about microphone disconnection
+            let _ = app
+                .notification()
+                .builder()
+                .title("Microphone Disconnected")
+                .body("The microphone was disconnected during recording. Please reconnect and try again.")
+                .show();
+
+            // Emit error event to frontend
+            let _ = app.emit("recording:microphone-error", "Microphone disconnected during recording");
+
+            *state.recording_state.write() = RecordingState::Error("Microphone disconnected".to_string());
+            let _ = app.emit("recording:state-changed", "error");
+            hide_recording_indicator(app);
+
+            return Err("Microphone disconnected during recording".to_string());
+        }
+    }
 
     // Check duration
     let duration = {

@@ -22,8 +22,9 @@ interface Settings {
       gpu_enabled: boolean;
     };
     groq: {
-      api_key: string;
+      api_key_configured: boolean;
       model: string;
+      timeout_seconds: number;
     };
   };
   audio: {

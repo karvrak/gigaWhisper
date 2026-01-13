@@ -6,28 +6,47 @@ use super::{TranscriptionConfig, TranscriptionError, TranscriptionProvider, Tran
 use crate::audio::encode_wav;
 use crate::config::SecretsManager;
 use async_trait::async_trait;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 const GROQ_API_URL: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
+const DEFAULT_TIMEOUT_SECONDS: u64 = 30;
 
 /// Groq API transcription provider
 pub struct GroqProvider {
     model: String,
     client: reqwest::Client,
+    timeout: Duration,
 }
 
 impl GroqProvider {
-    /// Create a new Groq provider
+    /// Create a new Groq provider with default timeout
     pub fn new(model: Option<String>) -> Self {
+        Self::with_timeout(model, DEFAULT_TIMEOUT_SECONDS)
+    }
+
+    /// Create a new Groq provider with custom timeout
+    pub fn with_timeout(model: Option<String>, timeout_seconds: u64) -> Self {
+        let timeout = Duration::from_secs(timeout_seconds);
+        let client = reqwest::Client::builder()
+            .timeout(timeout)
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+
         Self {
             model: model.unwrap_or_else(|| "whisper-large-v3".to_string()),
-            client: reqwest::Client::new(),
+            client,
+            timeout,
         }
     }
 
     /// Get API key from secure storage
     fn get_api_key(&self) -> Option<String> {
         SecretsManager::get_groq_api_key().ok()
+    }
+
+    /// Get the current timeout
+    pub fn timeout(&self) -> Duration {
+        self.timeout
     }
 }
 

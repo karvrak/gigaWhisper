@@ -29,16 +29,24 @@ export function useRecording() {
       }
     });
 
-    // Also listen for specific error events
+    // Listen for specific error events
     const unsubError = listen<string>('transcription:error', (event) => {
       setState({ state: 'error', error: event.payload });
       // Reset to idle after showing error
       setTimeout(() => setState({ state: 'idle' }), 3000);
     });
 
+    // Listen for microphone disconnection errors
+    const unsubMicError = listen<string>('recording:microphone-error', (event) => {
+      setState({ state: 'error', error: event.payload });
+      // Reset to idle after showing error (longer delay for hardware issues)
+      setTimeout(() => setState({ state: 'idle' }), 5000);
+    });
+
     return () => {
       unsubStateChanged.then((fn) => fn());
       unsubError.then((fn) => fn());
+      unsubMicError.then((fn) => fn());
     };
   }, []);
 

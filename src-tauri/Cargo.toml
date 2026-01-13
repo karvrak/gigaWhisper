@@ -1,6 +1,6 @@
 [package]
 name = "gigawhisper"
-version = "0.1.0"
+version = "0.2.0"
 description = "Open-source voice transcription app for Windows"
 authors = ["GigaWhisper Contributors"]
 edition = "2021"
@@ -33,26 +33,14 @@ serde_json = "1"
 cpal = "0.15"
 rubato = "0.15"  # Resampling
 
-# Whisper.cpp bindings
-whisper-rs = "0.13"
+# Whisper.cpp bindings (GPU features are optional)
+whisper-rs = "0.14"
 
 # HTTP client for Groq API
 reqwest = { version = "0.12", features = ["json", "rustls-tls", "multipart", "stream"] }
 
 # Futures utilities for async streams
 futures-util = "0.3"
-
-# Windows API
-[target.'cfg(windows)'.dependencies]
-windows = { version = "0.58", features = [
-    "Win32_Foundation",
-    "Win32_UI_Input_KeyboardAndMouse",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_System_Threading",
-    "Win32_System_ProcessStatus",
-    "Win32_Security_Cryptography",
-    "Win32_System_DataExchange",
-] }
 
 # Async
 async-trait = "0.1"
@@ -86,9 +74,29 @@ hound = "3.5"
 # Encoding
 base64 = "0.22"
 
+# Windows-specific dependencies
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Threading",
+    "Win32_System_ProcessStatus",
+    "Win32_Security_Cryptography",
+    "Win32_System_DataExchange",
+    "Win32_System_SystemInformation",
+    "Win32_Storage_FileSystem",
+] }
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+# GPU acceleration features
+# Use: cargo build --features gpu-vulkan (for AMD/Intel/NVIDIA)
+# Use: cargo build --features gpu-cuda (for NVIDIA only, better performance)
+gpu-vulkan = ["whisper-rs/vulkan"]
+gpu-cuda = ["whisper-rs/cuda"]
 
 [profile.release]
 panic = "abort"

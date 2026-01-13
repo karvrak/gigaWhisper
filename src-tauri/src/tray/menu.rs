@@ -4,11 +4,12 @@
 
 use tauri::{
     menu::{Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::{MouseButton, MouseButtonState, TrayIconEvent},
     Manager,
 };
 
 /// Setup system tray
+/// Uses the tray icon created from tauri.conf.json (id: "main") and adds menu + events
 pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Create menu items
     let show_item = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
@@ -17,29 +18,33 @@ pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Build menu
     let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
 
-    // Create tray icon
-    let _tray = TrayIconBuilder::new()
-        .icon(app.default_window_icon().unwrap().clone())
-        .menu(&menu)
-        .tooltip("GigaWhisper - Voice Transcription")
-        .on_menu_event(|app, event| {
-            handle_menu_event(app, &event.id.0);
-        })
-        .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                ..
-            } = event
-            {
-                // Show main window on left click
-                if let Some(window) = tray.app_handle().get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
+    // Get existing tray icon created from tauri.conf.json (id: "main")
+    let tray = app.tray_by_id("main").ok_or("Tray icon 'main' not found")?;
+
+    // Set menu on existing tray
+    tray.set_menu(Some(menu))?;
+    tray.set_tooltip(Some("GigaWhisper - Voice Transcription"))?;
+
+    // Set up menu event handler
+    tray.on_menu_event(|app, event| {
+        handle_menu_event(app, &event.id.0);
+    });
+
+    // Set up tray icon click event handler
+    tray.on_tray_icon_event(|tray, event| {
+        if let TrayIconEvent::Click {
+            button: MouseButton::Left,
+            button_state: MouseButtonState::Up,
+            ..
+        } = event
+        {
+            // Show main window on left click
+            if let Some(window) = tray.app_handle().get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
             }
-        })
-        .build(app)?;
+        }
+    });
 
     tracing::info!("System tray setup complete");
     Ok(())

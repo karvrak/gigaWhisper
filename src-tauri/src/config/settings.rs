@@ -143,6 +143,44 @@ pub enum TranscriptionProvider {
     Groq,
 }
 
+/// GPU backend selection for whisper acceleration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GpuBackend {
+    /// CPU only (no GPU acceleration)
+    Cpu,
+    /// Vulkan backend (AMD, Intel, NVIDIA - cross-platform)
+    Vulkan,
+    /// CUDA backend (NVIDIA only - best performance)
+    Cuda,
+}
+
+impl GpuBackend {
+    /// Check if this backend is available in the current build
+    pub fn is_available(&self) -> bool {
+        match self {
+            GpuBackend::Cpu => true,
+            #[cfg(feature = "gpu-vulkan")]
+            GpuBackend::Vulkan => true,
+            #[cfg(not(feature = "gpu-vulkan"))]
+            GpuBackend::Vulkan => false,
+            #[cfg(feature = "gpu-cuda")]
+            GpuBackend::Cuda => true,
+            #[cfg(not(feature = "gpu-cuda"))]
+            GpuBackend::Cuda => false,
+        }
+    }
+
+    /// Get display name for the backend
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            GpuBackend::Cpu => "CPU",
+            GpuBackend::Vulkan => "Vulkan (AMD/Intel/NVIDIA)",
+            GpuBackend::Cuda => "CUDA (NVIDIA)",
+        }
+    }
+}
+
 /// Local whisper.cpp settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -153,6 +191,8 @@ pub struct LocalTranscriptionSettings {
     pub threads: usize,
     /// Enable GPU acceleration
     pub gpu_enabled: bool,
+    /// GPU backend to use when gpu_enabled is true
+    pub gpu_backend: GpuBackend,
 }
 
 impl Default for LocalTranscriptionSettings {
@@ -161,6 +201,7 @@ impl Default for LocalTranscriptionSettings {
             model: WhisperModel::Small,
             threads: 4,
             gpu_enabled: false,
+            gpu_backend: GpuBackend::Cpu,
         }
     }
 }
@@ -209,6 +250,8 @@ pub struct GroqSettings {
     pub api_key_configured: bool,
     /// Model identifier
     pub model: String,
+    /// Request timeout in seconds (default: 30)
+    pub timeout_seconds: u32,
 }
 
 impl Default for GroqSettings {
@@ -216,6 +259,7 @@ impl Default for GroqSettings {
         Self {
             api_key_configured: false,
             model: "whisper-large-v3".to_string(),
+            timeout_seconds: 30,
         }
     }
 }

@@ -3,8 +3,9 @@
 //! Handle configuration read/write operations.
 
 use crate::config::{SecretsManager, Settings};
+use crate::shortcuts;
 use crate::AppState;
-use tauri::State;
+use tauri::{AppHandle, State};
 
 /// Get current settings
 #[tauri::command]
@@ -15,6 +16,7 @@ pub fn get_settings(state: State<'_, AppState>) -> Settings {
 /// Save settings
 #[tauri::command]
 pub async fn save_settings(
+    app: AppHandle,
     state: State<'_, AppState>,
     settings: Settings,
 ) -> Result<(), String> {
@@ -22,6 +24,13 @@ pub async fn save_settings(
 
     // Validate settings
     settings.validate().map_err(|e| e.to_string())?;
+
+    // Check if shortcuts have changed
+    let old_shortcut = {
+        let config = state.config.read();
+        config.shortcuts.record.clone()
+    };
+    let shortcuts_changed = old_shortcut != settings.shortcuts.record;
 
     // Update in-memory state
     {
@@ -31,6 +40,16 @@ pub async fn save_settings(
 
     // Persist to disk
     settings.save().map_err(|e| e.to_string())?;
+
+    // Re-register shortcuts if they changed
+    if shortcuts_changed {
+        tracing::info!("Shortcut changed, re-registering...");
+        if let Err(e) = shortcuts::update_shortcuts(&app) {
+            tracing::error!("Failed to update shortcuts: {}", e);
+            return Err(format!("Settings saved but shortcut update failed: {}", e));
+        }
+        tracing::info!("Shortcuts re-registered successfully");
+    }
 
     tracing::info!("Settings saved successfully");
     Ok(())

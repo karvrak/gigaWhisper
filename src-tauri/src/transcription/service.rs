@@ -42,6 +42,7 @@ impl Default for TranscriptionStatus {
 struct CachedWhisper {
     provider: WhisperProvider,
     model_path: PathBuf,
+    gpu_enabled: bool,
 }
 
 /// Centralized transcription service
@@ -86,32 +87,47 @@ impl TranscriptionService {
             let model_path = crate::config::models_dir()
                 .join(config.transcription.local.model.filename());
             let threads = config.transcription.local.threads;
+            let gpu_enabled = config.transcription.local.gpu_enabled;
 
-            self.ensure_whisper_loaded(model_path, threads)?;
+            self.ensure_whisper_loaded(model_path, threads, gpu_enabled)?;
         }
         Ok(())
     }
 
     /// Ensure Whisper model is loaded (with caching)
-    fn ensure_whisper_loaded(&self, model_path: PathBuf, threads: usize) -> Result<(), String> {
+    fn ensure_whisper_loaded(
+        &self,
+        model_path: PathBuf,
+        threads: usize,
+        gpu_enabled: bool,
+    ) -> Result<(), String> {
         let needs_load = {
             let cached = self.cached_whisper.read();
             match &*cached {
-                Some(c) => c.model_path != model_path || !c.provider.is_model_loaded(),
+                Some(c) => {
+                    c.model_path != model_path
+                        || c.gpu_enabled != gpu_enabled
+                        || !c.provider.is_model_loaded()
+                }
                 None => true,
             }
         };
 
         if needs_load {
-            tracing::info!("Loading Whisper model: {:?}", model_path);
+            tracing::info!(
+                "Loading Whisper model: {:?} (GPU: {})",
+                model_path,
+                if gpu_enabled { "enabled" } else { "disabled" }
+            );
 
-            let provider = WhisperProvider::new(model_path.clone(), threads);
+            let provider = WhisperProvider::with_gpu(model_path.clone(), threads, gpu_enabled);
             provider.load_model().map_err(|e| e.to_string())?;
 
             let mut cached = self.cached_whisper.write();
             *cached = Some(CachedWhisper {
                 provider,
                 model_path,
+                gpu_enabled,
             });
 
             let mut status = self.status.write();
@@ -153,7 +169,10 @@ impl TranscriptionService {
 
         let result = match config.transcription.provider {
             ConfigProvider::Groq => {
-                let provider = GroqProvider::new(Some(config.transcription.groq.model.clone()));
+                let provider = GroqProvider::with_timeout(
+                    Some(config.transcription.groq.model.clone()),
+                    config.transcription.groq.timeout_seconds as u64,
+                );
                 provider
                     .transcribe(samples, &transcription_config)
                     .await
@@ -163,9 +182,10 @@ impl TranscriptionService {
                 let model_path = crate::config::models_dir()
                     .join(config.transcription.local.model.filename());
                 let threads = config.transcription.local.threads;
+                let gpu_enabled = config.transcription.local.gpu_enabled;
 
                 // Ensure model is loaded and get a clone of the provider
-                self.ensure_whisper_loaded(model_path, threads)?;
+                self.ensure_whisper_loaded(model_path, threads, gpu_enabled)?;
 
                 // Get a clone of the cached provider (cheap because context is Arc)
                 let provider = {

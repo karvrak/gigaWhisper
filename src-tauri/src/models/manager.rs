@@ -61,11 +61,8 @@ pub fn delete_model(model: &WhisperModel) -> Result<(), std::io::Error> {
 
 /// Get recommended model based on available RAM
 pub fn recommend_model() -> WhisperModel {
-    // Simple heuristic based on system memory
-    // In reality, we'd check GPU VRAM as well
-    let total_ram_gb = sys_info::mem_info()
-        .map(|m| m.total / 1024 / 1024)
-        .unwrap_or(4);
+    // Get system memory using Windows API
+    let total_ram_gb = get_system_memory_gb().unwrap_or(8);
 
     if total_ram_gb >= 16 {
         WhisperModel::Medium
@@ -78,16 +75,28 @@ pub fn recommend_model() -> WhisperModel {
     }
 }
 
-// Simple sys_info replacement since we don't have that crate
-mod sys_info {
-    pub struct MemInfo {
-        pub total: u64,
-    }
+/// Get total system memory in GB using Windows API
+#[cfg(windows)]
+fn get_system_memory_gb() -> Option<u64> {
+    use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
 
-    pub fn mem_info() -> Result<MemInfo, ()> {
-        // Placeholder - would use actual system API
-        Ok(MemInfo {
-            total: 8 * 1024 * 1024, // Assume 8GB
-        })
+    unsafe {
+        let mut mem_info = MEMORYSTATUSEX {
+            dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32,
+            ..Default::default()
+        };
+
+        if GlobalMemoryStatusEx(&mut mem_info).is_ok() {
+            // Convert bytes to GB
+            Some(mem_info.ullTotalPhys / (1024 * 1024 * 1024))
+        } else {
+            None
+        }
     }
+}
+
+#[cfg(not(windows))]
+fn get_system_memory_gb() -> Option<u64> {
+    // Fallback for non-Windows platforms
+    Some(8)
 }

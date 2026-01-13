@@ -1,6 +1,6 @@
 {
   "name": "gigawhisper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Free open-source voice dictation and speech-to-text for Windows. Type with your voice using local Whisper AI or cloud transcription. SuperWhisper alternative.",
   "keywords": [
     "whisper",
@@ -27,22 +27,28 @@
     "tauri:build": "tauri build",
     "lint": "eslint src --ext ts,tsx",
     "lint:fix": "eslint src --ext ts,tsx --fix",
-    "format": "prettier --write src"
+    "format": "prettier --write src",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-global-shortcut": "^2.0.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
+    "@tauri-apps/plugin-global-shortcut": "^2.0.0",
     "@tauri-apps/plugin-notification": "^2.0.0",
     "@tauri-apps/plugin-shell": "^2.0.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.454.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zustand": "^4.5.5",
-    "lucide-react": "^0.454.0",
-    "clsx": "^2.1.1"
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@types/node": "^25.0.8",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@typescript-eslint/eslint-plugin": "^8.14.0",
@@ -51,11 +57,13 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^9.14.0",
     "eslint-plugin-react-hooks": "^5.0.0",
+    "jsdom": "^27.4.0",
     "postcss": "^8.4.47",
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.14",
     "typescript": "^5.6.3",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "^4.0.17"
   },
   "repository": {
     "type": "git",
