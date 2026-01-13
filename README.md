@@ -1,6 +1,19 @@
 # GigaWhisper
 
-Open-source voice transcription for Windows. A SuperWhisper alternative built with Tauri.
+**Free, open-source voice dictation for Windows** — Type with your voice in any application.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://github.com/karvrak/gigaWhisper/releases)
+[![Tauri](https://img.shields.io/badge/Built%20with-Tauri-FFC131?logo=tauri)](https://tauri.app/)
+
+> A lightweight, privacy-focused alternative to SuperWhisper. Powered by OpenAI Whisper for accurate speech-to-text, running locally or in the cloud.
+
+## Why GigaWhisper?
+
+- **100% Free & Open Source** — No subscriptions, no hidden costs
+- **Privacy First** — Run entirely offline with local AI transcription
+- **Lightweight** — Only ~10MB installer, minimal CPU/RAM usage
+- **Universal** — Works in any Windows application (Word, Chrome, VS Code, etc.)
 
 ## Features
 

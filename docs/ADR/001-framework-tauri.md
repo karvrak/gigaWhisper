@@ -1,19 +1,19 @@
-# ADR-001: Choix du Framework Desktop - Tauri v2
+# ADR-001: Desktop Framework Choice - Tauri v2
 
 ## Status
 Accepted
 
 ## Context
 
-GigaWhisper necessite un framework desktop pour Windows avec les exigences suivantes :
-- Performance native (latence minimale pour la transcription vocale)
-- Integration facile avec whisper.cpp (library C++)
-- Raccourcis globaux fiables
-- System tray natif
-- Injection clavier (paste automatique)
-- Bundle leger pour distribution open-source
+GigaWhisper requires a desktop framework for Windows with the following requirements:
+- Native performance (minimal latency for voice transcription)
+- Easy integration with whisper.cpp (C++ library)
+- Reliable global shortcuts
+- Native system tray
+- Keyboard injection (automatic paste)
+- Lightweight bundle for open-source distribution
 
-Les options evaluees etaient :
+The options evaluated were:
 1. **Tauri** (Rust + WebView)
 2. **Electron** (Node.js + Chromium)
 3. **Flutter Desktop** (Dart)
@@ -21,37 +21,37 @@ Les options evaluees etaient :
 
 ## Decision
 
-Nous choisissons **Tauri v2** avec Rust comme backend et React/TypeScript pour l'UI.
+We choose **Tauri v2** with Rust as the backend and React/TypeScript for the UI.
 
 ## Consequences
 
 ### Positives
-- **Performance** : Rust compile en code natif, pas de GC, overhead minimal
-- **Bundle size** : ~5-10 MB vs ~150 MB pour Electron
-- **Securite** : Rust memory safety, pas de vulnerabilites buffer overflow
-- **Integration whisper.cpp** : FFI C/Rust direct via `whisper-rs`
-- **Ecosystem mature** : Plugins officiels pour shortcuts, tray, clipboard
-- **Open-source friendly** : MIT license, communaute active (80k+ stars)
+- **Performance**: Rust compiles to native code, no GC, minimal overhead
+- **Bundle size**: ~5-10 MB vs ~150 MB for Electron
+- **Security**: Rust memory safety, no buffer overflow vulnerabilities
+- **whisper.cpp integration**: Direct C/Rust FFI via `whisper-rs`
+- **Mature ecosystem**: Official plugins for shortcuts, tray, clipboard
+- **Open-source friendly**: MIT license, active community (80k+ stars)
 
 ### Negatives
-- **Courbe d'apprentissage** : Rust plus complexe que JavaScript/C#
-- **WebView variabilite** : Depend de WebView2 sur Windows (pre-installe W10/W11)
-- **Debugging** : Outils moins matures qu'Electron DevTools
+- **Learning curve**: Rust is more complex than JavaScript/C#
+- **WebView variability**: Depends on WebView2 on Windows (pre-installed on W10/W11)
+- **Debugging**: Less mature tools than Electron DevTools
 
-### Risques mitiges
-- WebView2 : Pre-installe sur Windows 10/11, fallback installeur si absent
-- Complexite Rust : Utilisation de crates matures, patterns idiomatiques
+### Mitigated Risks
+- WebView2: Pre-installed on Windows 10/11, fallback installer if absent
+- Rust complexity: Use of mature crates, idiomatic patterns
 
 ## Alternatives Considered
 
 ### Electron
-- **Rejete car** : Bundle trop lourd (150MB+), consommation RAM excessive (100MB+ idle)
-- **Avantage non retenu** : Ecosysteme JavaScript plus accessible
+- **Rejected because**: Bundle too heavy (150MB+), excessive RAM consumption (100MB+ idle)
+- **Advantage not retained**: More accessible JavaScript ecosystem
 
 ### Flutter Desktop
-- **Rejete car** : Integration C++ complexe via FFI Dart, moins de support Windows natif
-- **Avantage non retenu** : UI declarative moderne
+- **Rejected because**: Complex C++ integration via Dart FFI, less native Windows support
+- **Advantage not retained**: Modern declarative UI
 
 ### .NET WPF
-- **Rejete car** : Moins adapte open-source, interop C++ verbeux
-- **Avantage non retenu** : Integration Windows parfaite
+- **Rejected because**: Less suited for open-source, verbose C++ interop
+- **Advantage not retained**: Perfect Windows integration

@@ -1,27 +1,27 @@
-# ADR-004: Injection Clavier et Paste Automatique
+# ADR-004: Keyboard Injection and Automatic Paste
 
 ## Status
 Accepted
 
 ## Context
 
-Apres transcription, GigaWhisper doit inserer le texte dans l'application active. Deux scenarios :
+After transcription, GigaWhisper must insert the text into the active application. Two scenarios:
 
-1. **Champ de texte actif** : Coller directement le texte
-2. **Pas de curseur** : Afficher popup avec le texte
+1. **Active text field**: Paste the text directly
+2. **No cursor**: Display popup with the text
 
-Contraintes Windows :
-- Certaines applications bloquent le paste (jeux, terminals securises)
-- Certains champs utilisent des controles custom (pas de clipboard standard)
-- Latence doit etre imperceptible
+Windows constraints:
+- Some applications block paste (games, secure terminals)
+- Some fields use custom controls (no standard clipboard)
+- Latency must be imperceptible
 
 ## Decision
 
-Implementer une strategie multi-niveaux :
+Implement a multi-level strategy:
 
-1. **Methode principale** : Clipboard + simulation Ctrl+V
-2. **Fallback** : `SendInput` pour injection caractere par caractere
-3. **Dernier recours** : Popup overlay avec bouton copier
+1. **Primary method**: Clipboard + Ctrl+V simulation
+2. **Fallback**: `SendInput` for character-by-character injection
+3. **Last resort**: Popup overlay with copy button
 
 ## Implementation
 
@@ -32,18 +32,18 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 pub struct KeyboardInjector;
 
 impl KeyboardInjector {
-    /// Strategie principale : Clipboard + Ctrl+V
+    /// Primary strategy: Clipboard + Ctrl+V
     pub fn paste_via_clipboard(text: &str) -> Result<()> {
-        // 1. Sauvegarder clipboard actuel
+        // 1. Save current clipboard
         let previous = clipboard::get_text()?;
 
-        // 2. Mettre le texte dans clipboard
+        // 2. Put text in clipboard
         clipboard::set_text(text)?;
 
-        // 3. Simuler Ctrl+V
+        // 3. Simulate Ctrl+V
         Self::send_ctrl_v()?;
 
-        // 4. Restaurer clipboard apres delai
+        // 4. Restore clipboard after delay
         tokio::spawn(async move {
             tokio::time::sleep(Duration::from_millis(100)).await;
             let _ = clipboard::set_text(&previous);
@@ -52,11 +52,11 @@ impl KeyboardInjector {
         Ok(())
     }
 
-    /// Fallback : Injection caractere par caractere
+    /// Fallback: Character-by-character injection
     pub fn type_text(text: &str) -> Result<()> {
         for c in text.chars() {
             Self::send_unicode_char(c)?;
-            // Petit delai pour eviter perte de caracteres
+            // Small delay to avoid character loss
             std::thread::sleep(Duration::from_micros(500));
         }
         Ok(())
@@ -116,26 +116,26 @@ impl KeyboardInjector {
 }
 ```
 
-### Detection Fenetre Active
+### Active Window Detection
 
 ```rust
 pub struct FocusDetector;
 
 impl FocusDetector {
-    /// Verifie si une fenetre avec champ texte est active
+    /// Check if a window with text field is active
     pub fn has_text_input() -> bool {
         unsafe {
             let hwnd = GetForegroundWindow();
             let focused = GetFocus();
 
-            // Verifier si le controle focused accepte du texte
-            // Heuristique : envoyer WM_GETDLGCODE et verifier DLGC_HASSETSEL
+            // Check if the focused control accepts text
+            // Heuristic: send WM_GETDLGCODE and check DLGC_HASSETSEL
             let code = SendMessageW(focused, WM_GETDLGCODE, WPARAM(0), LPARAM(0));
             code.0 & DLGC_HASSETSEL as isize != 0
         }
     }
 
-    /// Recupere le nom de l'application active
+    /// Get the active application name
     pub fn get_active_app_name() -> Option<String> {
         unsafe {
             let hwnd = GetForegroundWindow();
@@ -147,7 +147,7 @@ impl FocusDetector {
 }
 ```
 
-## Flow Decision
+## Decision Flow
 
 ```
                     ┌─────────────────┐
@@ -186,33 +186,33 @@ impl FocusDetector {
 ## Consequences
 
 ### Positives
-- **Robuste** : Multiple strategies de fallback
-- **Rapide** : Ctrl+V est quasi instantane
-- **Compatible** : Fonctionne avec la majorite des apps Windows
-- **Non-intrusif** : Restaure le clipboard original
+- **Robust**: Multiple fallback strategies
+- **Fast**: Ctrl+V is nearly instantaneous
+- **Compatible**: Works with most Windows apps
+- **Non-intrusive**: Restores original clipboard
 
 ### Negatives
-- **Clipboard ecrase** : Temporairement remplace le contenu utilisateur
-- **Race conditions** : Si utilisateur copie pendant le paste
-- **Apps securisees** : Certaines apps bloquent SendInput (anti-cheat, etc.)
+- **Clipboard overwritten**: Temporarily replaces user content
+- **Race conditions**: If user copies during paste
+- **Secure apps**: Some apps block SendInput (anti-cheat, etc.)
 
-## Edge Cases Geres
+## Handled Edge Cases
 
-1. **Applications UAC elevated** : Peut echouer si GigaWhisper n'est pas admin
-2. **Jeux fullscreen** : Utiliser popup overlay
-3. **Remote Desktop** : SendInput peut ne pas fonctionner, utiliser clipboard
-4. **Emojis/Unicode** : `KEYEVENTF_UNICODE` supporte UTF-16
+1. **UAC elevated applications**: May fail if GigaWhisper is not admin
+2. **Fullscreen games**: Use popup overlay
+3. **Remote Desktop**: SendInput may not work, use clipboard
+4. **Emojis/Unicode**: `KEYEVENTF_UNICODE` supports UTF-16
 
 ## Alternatives Considered
 
 ### UI Automation API
-- **Rejete car** : Complexe, overhead important
-- **Avantage** : Plus fiable pour trouver les champs texte
+- **Rejected because**: Complex, significant overhead
+- **Advantage**: More reliable for finding text fields
 
 ### Direct WM_CHAR messages
-- **Rejete car** : Ne fonctionne pas avec tous les controles
-- **Avantage** : Plus direct
+- **Rejected because**: Doesn't work with all controls
+- **Advantage**: More direct
 
 ### SetWindowText
-- **Rejete car** : Remplace tout le contenu, pas d'insertion
-- **Avantage** : Simple pour certains cas
+- **Rejected because**: Replaces all content, no insertion
+- **Advantage**: Simple for certain cases

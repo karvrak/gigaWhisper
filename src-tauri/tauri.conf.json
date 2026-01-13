@@ -88,8 +88,8 @@
         "template": null
       }
     },
-    "shortDescription": "Voice transcription made simple",
-    "longDescription": "GigaWhisper is an open-source voice transcription application that lets you dictate text into any application using local AI (whisper.cpp) or cloud services (Groq API).",
+    "shortDescription": "Free voice dictation for Windows",
+    "longDescription": "GigaWhisper is a free, open-source voice dictation and speech-to-text application for Windows. Type with your voice in any application using local AI transcription (Whisper) for privacy, or fast cloud transcription (Groq API). A lightweight SuperWhisper alternative with global hotkeys, push-to-talk mode, and automatic text insertion.",
     "category": "Productivity",
     "publisher": "GigaWhisper"
   },

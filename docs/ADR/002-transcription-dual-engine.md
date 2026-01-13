@@ -1,27 +1,27 @@
-# ADR-002: Architecture Dual-Engine pour la Transcription
+# ADR-002: Dual-Engine Architecture for Transcription
 
 ## Status
 Accepted
 
 ## Context
 
-GigaWhisper doit transcrire l'audio vocal en texte. Deux approches existent :
+GigaWhisper needs to transcribe voice audio to text. Two approaches exist:
 
-1. **Locale** : whisper.cpp execute sur la machine utilisateur
-2. **Cloud** : API externe (Groq, OpenAI Whisper API, etc.)
+1. **Local**: whisper.cpp running on the user's machine
+2. **Cloud**: External API (Groq, OpenAI Whisper API, etc.)
 
-Les utilisateurs ont des besoins varies :
-- Certains privilegient la **confidentialite** (tout en local)
-- D'autres veulent la **qualite maximale** sans GPU puissant
-- Le **temps de reponse** est critique pour l'experience utilisateur
+Users have varied needs:
+- Some prioritize **privacy** (all local)
+- Others want **maximum quality** without a powerful GPU
+- **Response time** is critical for user experience
 
 ## Decision
 
-Implementer une architecture **dual-engine** avec :
-1. **whisper.cpp** (local) comme moteur par defaut
-2. **Groq API** (cloud) comme option haute-performance
+Implement a **dual-engine** architecture with:
+1. **whisper.cpp** (local) as the default engine
+2. **Groq API** (cloud) as a high-performance option
 
-L'utilisateur peut choisir son provider dans les settings. Un fallback automatique est possible si le provider principal echoue.
+The user can choose their provider in settings. Automatic fallback is possible if the primary provider fails.
 
 ## Architecture
 
@@ -40,7 +40,7 @@ L'utilisateur peut choisir son provider dans les settings. Un fallback automatiq
 │  │ WhisperProvider │        │   GroqProvider  │        │
 │  │                 │        │                 │        │
 │  │ - whisper.cpp   │        │ - REST API      │        │
-│  │ - Models local  │        │ - API Key       │        │
+│  │ - Local models  │        │ - API Key       │        │
 │  │ - CPU/GPU       │        │ - Rate limits   │        │
 │  └─────────────────┘        └─────────────────┘        │
 └─────────────────────────────────────────────────────────┘
@@ -49,38 +49,38 @@ L'utilisateur peut choisir son provider dans les settings. Un fallback automatiq
 ## Consequences
 
 ### Positives
-- **Flexibilite** : Utilisateur choisit selon ses priorites
-- **Resilience** : Fallback si un provider est indisponible
-- **Extensibilite** : Facile d'ajouter d'autres providers (OpenAI, local LLM)
-- **Offline capable** : Mode local fonctionne sans internet
+- **Flexibility**: User chooses based on their priorities
+- **Resilience**: Fallback if a provider is unavailable
+- **Extensibility**: Easy to add other providers (OpenAI, local LLM)
+- **Offline capable**: Local mode works without internet
 
 ### Negatives
-- **Complexite** : Deux implementations a maintenir
-- **Modeles locaux** : Telechargement initial (75MB - 1.5GB selon modele)
-- **Configuration** : Plus d'options pour l'utilisateur
+- **Complexity**: Two implementations to maintain
+- **Local models**: Initial download (75MB - 1.5GB depending on model)
+- **Configuration**: More options for the user
 
 ## Provider Details
 
 ### whisper.cpp (Local)
 ```rust
-// Configuration exposee
+// Exposed configuration
 struct WhisperConfig {
     model: WhisperModel,      // tiny, base, small, medium, large
-    language: Option<String>, // auto-detect ou force
-    translate: bool,          // traduire vers anglais
-    threads: usize,           // parallelisme CPU
-    gpu: bool,                // acceleration GPU si disponible
+    language: Option<String>, // auto-detect or force
+    translate: bool,          // translate to English
+    threads: usize,           // CPU parallelism
+    gpu: bool,                // GPU acceleration if available
 }
 ```
 
-**Modeles supportes** :
-| Modele | Taille | VRAM | Qualite |
-|--------|--------|------|---------|
-| tiny   | 75 MB  | ~1GB | Basique |
-| base   | 142 MB | ~1GB | Correct |
-| small  | 466 MB | ~2GB | Bon     |
-| medium | 1.5 GB | ~5GB | Tres bon|
-| large  | 2.9 GB | ~10GB| Excellent|
+**Supported models**:
+| Model  | Size   | VRAM  | Quality   |
+|--------|--------|-------|-----------|
+| tiny   | 75 MB  | ~1GB  | Basic     |
+| base   | 142 MB | ~1GB  | Fair      |
+| small  | 466 MB | ~2GB  | Good      |
+| medium | 1.5 GB | ~5GB  | Very good |
+| large  | 2.9 GB | ~10GB | Excellent |
 
 ### Groq API (Cloud)
 ```rust
@@ -91,21 +91,21 @@ struct GroqConfig {
 }
 ```
 
-**Avantages Groq** :
-- Latence ultra-faible (~0.5s pour 30s audio)
-- Modele large-v3 sans GPU local
-- 100 requetes/jour gratuit
+**Groq advantages**:
+- Ultra-low latency (~0.5s for 30s audio)
+- large-v3 model without local GPU
+- 100 requests/day free
 
 ## Alternatives Considered
 
-### OpenAI Whisper API seul
-- **Rejete car** : Cout ($0.006/minute), pas de mode offline
-- **Avantage** : API stable, bien documentee
+### OpenAI Whisper API alone
+- **Rejected because**: Cost ($0.006/minute), no offline mode
+- **Advantage**: Stable, well-documented API
 
-### whisper.cpp seul
-- **Rejete car** : Qualite limitee sur CPU faibles, pas de GPU = lent
-- **Avantage** : 100% offline, confidentialite
+### whisper.cpp alone
+- **Rejected because**: Limited quality on weak CPUs, no GPU = slow
+- **Advantage**: 100% offline, privacy
 
 ### Faster-whisper (Python)
-- **Rejete car** : Necessite Python runtime, complexifie le packaging
-- **Avantage** : Plus rapide que whisper.cpp sur certains setups
+- **Rejected because**: Requires Python runtime, complicates packaging
+- **Advantage**: Faster than whisper.cpp on some setups

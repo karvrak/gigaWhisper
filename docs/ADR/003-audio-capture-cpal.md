@@ -1,25 +1,25 @@
-# ADR-003: Capture Audio avec cpal
+# ADR-003: Audio Capture with cpal
 
 ## Status
 Accepted
 
 ## Context
 
-GigaWhisper doit capturer l'audio du microphone de l'utilisateur avec :
-- Latence minimale (< 50ms)
-- Support de tous les peripheriques audio Windows
-- Format compatible whisper (16kHz, mono, f32)
-- Gestion propre des erreurs (micro debranche, etc.)
+GigaWhisper needs to capture audio from the user's microphone with:
+- Minimal latency (< 50ms)
+- Support for all Windows audio devices
+- Whisper-compatible format (16kHz, mono, f32)
+- Proper error handling (microphone unplugged, etc.)
 
-Options evaluees :
-1. **cpal** - Cross-platform audio I/O en Rust
-2. **rodio** - Haut niveau, base sur cpal
+Options evaluated:
+1. **cpal** - Cross-platform audio I/O in Rust
+2. **rodio** - High-level, based on cpal
 3. **Windows Audio Session API (WASAPI)** direct
 4. **PortAudio** bindings
 
 ## Decision
 
-Utiliser **cpal** (Cross-Platform Audio Library) pour la capture microphone.
+Use **cpal** (Cross-Platform Audio Library) for microphone capture.
 
 ## Implementation
 
@@ -33,7 +33,7 @@ pub struct AudioCapture {
 }
 
 pub struct AudioConfig {
-    pub sample_rate: u32,      // 16000 Hz pour whisper
+    pub sample_rate: u32,      // 16000 Hz for whisper
     pub channels: u16,         // 1 (mono)
     pub buffer_duration_ms: u32, // 100ms ring buffer
 }
@@ -57,7 +57,7 @@ impl AudioCapture {
 }
 ```
 
-### Pipeline Audio
+### Audio Pipeline
 
 ```
 ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
@@ -76,31 +76,31 @@ impl AudioCapture {
 ## Consequences
 
 ### Positives
-- **Pure Rust** : Pas de dependances C externes a gerer
-- **Cross-platform** : Fonctionne sur Windows, macOS, Linux
-- **Bas niveau** : Controle total sur le format et la latence
-- **WASAPI natif** : Utilise WASAPI sur Windows (optimal)
-- **Async-friendly** : Callbacks non-bloquants
+- **Pure Rust**: No external C dependencies to manage
+- **Cross-platform**: Works on Windows, macOS, Linux
+- **Low-level**: Full control over format and latency
+- **Native WASAPI**: Uses WASAPI on Windows (optimal)
+- **Async-friendly**: Non-blocking callbacks
 
 ### Negatives
-- **Verbeux** : Plus de code que rodio pour cas simples
-- **Resampling manuel** : Doit implementer conversion 48kHz -> 16kHz
-- **Gestion erreurs** : Doit gerer deconnexion device manuellement
+- **Verbose**: More code than rodio for simple cases
+- **Manual resampling**: Must implement 48kHz -> 16kHz conversion
+- **Error handling**: Must manually handle device disconnection
 
-## Configuration Audio Cible
+## Target Audio Configuration
 
 ```rust
 const WHISPER_SAMPLE_RATE: u32 = 16000;
 const WHISPER_CHANNELS: u16 = 1;
 
-// Format intermediaire (capture)
-// La plupart des micros sont en 48kHz stereo
-// On resample vers 16kHz mono pour whisper
+// Intermediate format (capture)
+// Most microphones are at 48kHz stereo
+// We resample to 16kHz mono for whisper
 ```
 
 ## Resampling
 
-Utilisation de `rubato` crate pour resampling de qualite :
+Using `rubato` crate for quality resampling:
 
 ```rust
 use rubato::{Resampler, SincFixedIn, SincInterpolationType};
@@ -119,13 +119,13 @@ fn create_resampler(from_rate: u32, to_rate: u32) -> SincFixedIn<f32> {
 ## Alternatives Considered
 
 ### rodio
-- **Rejete car** : Oriente playback, moins de controle sur input
-- **Avantage** : API plus simple
+- **Rejected because**: Playback-oriented, less control over input
+- **Advantage**: Simpler API
 
 ### WASAPI direct
-- **Rejete car** : Windows-only, plus complexe
-- **Avantage** : Latence potentiellement plus faible
+- **Rejected because**: Windows-only, more complex
+- **Advantage**: Potentially lower latency
 
 ### PortAudio
-- **Rejete car** : Bindings Rust moins maintenus, dependance C
-- **Avantage** : Tres mature, bien documente
+- **Rejected because**: Less maintained Rust bindings, C dependency
+- **Advantage**: Very mature, well-documented

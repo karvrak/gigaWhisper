@@ -2,24 +2,24 @@
 
 ## Overview
 
-GigaWhisper est une application desktop Windows open-source pour la transcription vocale en temps reel. Elle permet de dicter du texte qui est automatiquement insere dans n'importe quelle application.
+GigaWhisper is an open-source Windows desktop application for real-time voice transcription. It allows you to dictate text that is automatically inserted into any application.
 
 ## Architecture Principles
 
 ### 1. Performance First
-- Latence cible < 500ms entre fin de parole et texte affiche
-- Utilisation memoire < 200MB idle, < 500MB pendant transcription
-- Demarrage rapide < 2s
+- Target latency < 500ms between end of speech and displayed text
+- Memory usage < 200MB idle, < 500MB during transcription
+- Fast startup < 2s
 
 ### 2. Privacy by Default
-- Transcription locale par defaut (whisper.cpp)
-- Option cloud explicite (Groq API)
-- Aucune telemetrie sans consentement
+- Local transcription by default (whisper.cpp)
+- Explicit cloud option (Groq API)
+- No telemetry without consent
 
 ### 3. Simplicity
-- Une seule action : appuyer sur le raccourci et parler
-- Configuration minimale requise
-- Fonctionne "out of the box"
+- Single action: press the hotkey and speak
+- Minimal configuration required
+- Works out of the box
 
 ## System Architecture
 
@@ -100,7 +100,7 @@ GigaWhisper est une application desktop Windows open-source pour la transcriptio
 
 ### 1. Audio Capture Module
 
-**Responsabilite** : Capturer l'audio du microphone et le convertir au format whisper.
+**Responsibility**: Capture audio from the microphone and convert it to whisper format.
 
 ```rust
 pub struct AudioCapture {
@@ -118,11 +118,11 @@ pub trait AudioCapturePort {
 }
 ```
 
-**Format de sortie** : 16kHz, mono, f32 (normalise -1.0 a 1.0)
+**Output format**: 16kHz, mono, f32 (normalized -1.0 to 1.0)
 
 ### 2. Transcription Module
 
-**Responsabilite** : Convertir l'audio en texte via le provider configure.
+**Responsibility**: Convert audio to text via the configured provider.
 
 ```rust
 #[async_trait]
@@ -140,7 +140,7 @@ pub struct TranscriptionOrchestrator {
 
 ### 3. Output Module
 
-**Responsabilite** : Inserer le texte transcrit dans l'application active.
+**Responsibility**: Insert the transcribed text into the active application.
 
 ```rust
 pub enum OutputStrategy {
@@ -157,7 +157,7 @@ pub struct OutputManager {
 
 ### 4. Shortcuts Module
 
-**Responsabilite** : Gerer les raccourcis clavier globaux.
+**Responsibility**: Handle global keyboard shortcuts.
 
 ```rust
 pub struct ShortcutManager {
