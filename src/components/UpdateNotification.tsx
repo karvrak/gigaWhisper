@@ -7,6 +7,7 @@ interface UpdateInfo {
   currentVersion: string;
   newVersion: string;
   body?: string;
+  variant?: string;
 }
 
 interface DownloadProgress {

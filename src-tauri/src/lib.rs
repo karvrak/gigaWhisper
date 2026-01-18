@@ -3,6 +3,7 @@
 //! Core functionality for voice transcription.
 
 pub mod audio;
+pub mod build_info;
 pub mod commands;
 pub mod config;
 pub mod history;
@@ -162,6 +163,7 @@ pub fn run() {
             commands::history::get_audio_data,
             updater::install_update,
             updater::restart_app,
+            updater::get_build_variant,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

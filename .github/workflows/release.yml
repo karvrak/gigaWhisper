@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create_release.outputs.result }}
+      version: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,19 +38,33 @@ jobs:
               repo: context.repo.repo,
               tag_name: `v${{ steps.get_version.outputs.VERSION }}`,
               name: `GigaWhisper v${{ steps.get_version.outputs.VERSION }}`,
-              body: `## What's Changed\n\nSee the [full changelog](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/v${{ steps.get_version.outputs.VERSION }}...HEAD)\n\n## Installation\n\nDownload the installer for your platform below:\n- **Windows**: \`GigaWhisper_${{ steps.get_version.outputs.VERSION }}_x64-setup.exe\` (NSIS installer)\n- **Windows (MSI)**: \`GigaWhisper_${{ steps.get_version.outputs.VERSION }}_x64_en-US.msi\`\n\n## Auto-Update\n\nIf you already have GigaWhisper installed, you'll be prompted to update automatically.`,
+              body: `## What's Changed\n\nSee the [full changelog](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/v${{ steps.get_version.outputs.VERSION }}...HEAD)\n\n## Installation\n\nDownload the installer for your system:\n\n| Variant | Description | Download |\n|---------|-------------|----------|\n| **CPU** | Works on all systems | \`GigaWhisper_${{ steps.get_version.outputs.VERSION }}_x64-cpu-setup.exe\` |\n| **Vulkan** | GPU acceleration (AMD/Intel/NVIDIA) | \`GigaWhisper_${{ steps.get_version.outputs.VERSION }}_x64-vulkan-setup.exe\` |\n| **CUDA** | Best for NVIDIA GPUs | \`GigaWhisper_${{ steps.get_version.outputs.VERSION }}_x64-cuda-setup.exe\` |\n\n## Auto-Update\n\nIf you already have GigaWhisper installed, you'll be prompted to update automatically (same variant).`,
               draft: true,
               prerelease: false
             })
             return data.id
 
   # ============================================
-  # Build Windows
+  # Build Windows (3 variants)
   # ============================================
   build-windows:
-    name: Build Windows
+    name: Build Windows (${{ matrix.variant }})
     needs: create-release
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: cpu
+            features: ""
+            artifact_suffix: "cpu"
+          - variant: vulkan
+            features: "--features gpu-vulkan"
+            artifact_suffix: "vulkan"
+          - variant: cuda
+            features: "--features gpu-cuda"
+            artifact_suffix: "cuda"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -71,6 +86,26 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          key: ${{ matrix.variant }}
+
+      # CUDA setup (only for cuda variant)
+      - name: Setup CUDA
+        if: matrix.variant == 'cuda'
+        uses: Jimver/cuda-toolkit@v0.2.16
+        with:
+          cuda: '12.4.0'
+          method: 'network'
+          sub-packages: '["nvcc", "cudart"]'
+
+      # Vulkan SDK setup (only for vulkan variant)
+      - name: Setup Vulkan SDK
+        if: matrix.variant == 'vulkan'
+        uses: jakoch/install-vulkan-sdk-action@v1.0.4
+        with:
+          vulkan_version: 1.3.290.0
+          install_runtime: true
+          cache: true
+          destination: ${{ github.workspace }}/vulkan-sdk
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -83,7 +118,96 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
-          updaterJsonPreferNsis: true
+          args: ${{ matrix.features }}
+
+      # Rename artifacts to include variant
+      - name: Rename artifacts
+        shell: pwsh
+        run: |
+          $version = "${{ needs.create-release.outputs.version }}"
+          $variant = "${{ matrix.variant }}"
+          $releaseDir = "src-tauri/target/release/bundle/nsis"
+
+          # Find and rename NSIS installer
+          $nsisFile = Get-ChildItem -Path $releaseDir -Filter "*.exe" | Where-Object { $_.Name -notmatch "cpu|vulkan|cuda" } | Select-Object -First 1
+          if ($nsisFile) {
+            $newName = "GigaWhisper_${version}_x64-${variant}-setup.exe"
+            $newPath = Join-Path $releaseDir $newName
+            Move-Item $nsisFile.FullName $newPath -Force
+            Write-Host "Renamed $($nsisFile.Name) to $newName"
+
+            # Also rename the signature file
+            $sigFile = "$($nsisFile.FullName).sig"
+            if (Test-Path $sigFile) {
+              Move-Item $sigFile "$newPath.sig" -Force
+            }
+          }
+
+      # Upload renamed artifacts to release
+      - name: Upload artifacts to release
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = "${{ needs.create-release.outputs.version }}"
+          $variant = "${{ matrix.variant }}"
+          $releaseId = "${{ needs.create-release.outputs.release_id }}"
+          $releaseDir = "src-tauri/target/release/bundle/nsis"
+
+          # Upload NSIS installer
+          $exeFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.exe"
+          if (Test-Path $exeFile) {
+            gh release upload "v${version}" $exeFile --clobber
+            Write-Host "Uploaded $exeFile"
+          }
+
+          # Upload signature
+          $sigFile = "$exeFile.sig"
+          if (Test-Path $sigFile) {
+            gh release upload "v${version}" $sigFile --clobber
+            Write-Host "Uploaded $sigFile"
+          }
+
+      # Generate latest-{variant}.json
+      - name: Generate update manifest
+        shell: pwsh
+        run: |
+          $version = "${{ needs.create-release.outputs.version }}"
+          $variant = "${{ matrix.variant }}"
+          $releaseDir = "src-tauri/target/release/bundle/nsis"
+
+          # Read signature
+          $sigFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.exe.sig"
+          $signature = ""
+          if (Test-Path $sigFile) {
+            $signature = Get-Content $sigFile -Raw
+            $signature = $signature.Trim()
+          }
+
+          # Create latest-{variant}.json
+          $manifest = @{
+            version = $version
+            notes = "GigaWhisper v${version} (${variant})"
+            pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = $signature
+                url = "https://github.com/${{ github.repository }}/releases/download/v${version}/GigaWhisper_${version}_x64-${variant}-setup.exe"
+              }
+            }
+          }
+
+          $manifestJson = $manifest | ConvertTo-Json -Depth 10
+          $manifestFile = "latest-${variant}.json"
+          $manifestJson | Out-File -FilePath $manifestFile -Encoding utf8
+          Write-Host "Generated $manifestFile"
+          Get-Content $manifestFile
+
+      - name: Upload update manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ needs.create-release.outputs.version }}" "latest-${{ matrix.variant }}.json" --clobber
 
   # ============================================
   # Publish Release

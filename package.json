@@ -1,6 +1,6 @@
 {
   "name": "gigawhisper",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Free open-source voice dictation and speech-to-text for Windows. Type with your voice using local Whisper AI or cloud transcription. SuperWhisper alternative.",
   "keywords": [
     "whisper",
