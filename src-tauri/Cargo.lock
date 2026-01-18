@@ -1511,7 +1511,7 @@ dependencies = [
 
 [[package]]
 name = "gigawhisper"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -1522,6 +1522,7 @@ dependencies = [
  "futures-util",
  "hound",
  "keyring",
+ "num_cpus",
  "once_cell",
  "parking_lot",
  "reqwest",
@@ -1540,6 +1541,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+ "webrtc-vad",
  "whisper-rs",
  "windows 0.58.0",
 ]
@@ -2702,6 +2704,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "num_cpus"
+version = "1.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91df4bbde75afed763b708b7eee1e8e7651e02d97f6d5dd763e89367e957b23b"
+dependencies = [
+ "hermit-abi",
+ "libc",
 ]
 
 [[package]]
@@ -5777,6 +5789,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12bed680863276c63889429bfd6cab3b99943659923822de1c8a39c49e4d722c"
 dependencies = [
  "rustls-pki-types",
+]
+
+[[package]]
+name = "webrtc-vad"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39a1e40fd6ca90be95459152a2537f2ba4286ee1b13073f7ebcaa74fc94e3008"
+dependencies = [
+ "cc",
 ]
 
 [[package]]

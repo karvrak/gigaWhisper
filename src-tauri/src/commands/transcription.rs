@@ -3,6 +3,7 @@
 //! Handle transcription status and results.
 
 use crate::transcription::{TranscriptionStatus, WhisperProvider};
+use crate::utils::{metrics, CpuInfo, MetricsSummary, TranscriptionRecord};
 use crate::AppState;
 use serde::Serialize;
 use tauri::State;
@@ -51,4 +52,28 @@ pub fn get_gpu_info(state: State<'_, AppState>) -> GpuInfo {
         backend: WhisperProvider::gpu_backend_name().to_string(),
         enabled: config.transcription.local.gpu_enabled,
     }
+}
+
+/// Get CPU information for performance optimization
+#[tauri::command]
+pub fn get_cpu_info() -> CpuInfo {
+    CpuInfo::detect()
+}
+
+/// Get performance metrics summary
+#[tauri::command]
+pub fn get_metrics_summary() -> MetricsSummary {
+    metrics().read().get_summary()
+}
+
+/// Get recent transcription records
+#[tauri::command]
+pub fn get_recent_metrics(count: Option<usize>) -> Vec<TranscriptionRecord> {
+    metrics().read().get_recent(count.unwrap_or(10))
+}
+
+/// Reset performance metrics
+#[tauri::command]
+pub fn reset_metrics() {
+    metrics().write().reset();
 }

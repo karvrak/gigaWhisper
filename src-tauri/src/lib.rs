@@ -11,6 +11,7 @@ pub mod output;
 pub mod shortcuts;
 pub mod transcription;
 pub mod tray;
+pub mod utils;
 
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -123,6 +124,10 @@ pub fn run() {
             commands::transcription::preload_model,
             commands::transcription::unload_model,
             commands::transcription::get_gpu_info,
+            commands::transcription::get_cpu_info,
+            commands::transcription::get_metrics_summary,
+            commands::transcription::get_recent_metrics,
+            commands::transcription::reset_metrics,
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::get_audio_devices,

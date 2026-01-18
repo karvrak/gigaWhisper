@@ -4,9 +4,10 @@
 //! Handles provider caching, status tracking, and shared logic.
 
 use super::{GroqProvider, TranscriptionConfig, TranscriptionProvider, TranscriptionResult, WhisperProvider};
-use crate::audio::resample;
+use crate::audio::{resample, VadAggressiveness, VadConfig, VoiceActivityDetector};
 use crate::config::{Settings, TranscriptionProvider as ConfigProvider};
 use crate::output;
+use crate::utils::{metrics, TranscriptionRecord};
 use parking_lot::RwLock;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -43,6 +44,7 @@ struct CachedWhisper {
     provider: WhisperProvider,
     model_path: PathBuf,
     gpu_enabled: bool,
+    threads: usize,
 }
 
 /// Centralized transcription service
@@ -85,7 +87,7 @@ impl TranscriptionService {
     pub fn preload_model(&self, config: &Settings) -> Result<(), String> {
         if config.transcription.provider == ConfigProvider::Local {
             let model_path = crate::config::models_dir()
-                .join(config.transcription.local.model.filename());
+                .join(config.transcription.local.model_filename());
             let threads = config.transcription.local.threads;
             let gpu_enabled = config.transcription.local.gpu_enabled;
 
@@ -107,6 +109,7 @@ impl TranscriptionService {
                 Some(c) => {
                     c.model_path != model_path
                         || c.gpu_enabled != gpu_enabled
+                        || c.threads != threads
                         || !c.provider.is_model_loaded()
                 }
                 None => true,
@@ -115,9 +118,10 @@ impl TranscriptionService {
 
         if needs_load {
             tracing::info!(
-                "Loading Whisper model: {:?} (GPU: {})",
+                "Loading Whisper model: {:?} (GPU: {}, threads: {})",
                 model_path,
-                if gpu_enabled { "enabled" } else { "disabled" }
+                if gpu_enabled { "enabled" } else { "disabled" },
+                threads
             );
 
             let provider = WhisperProvider::with_gpu(model_path.clone(), threads, gpu_enabled);
@@ -128,6 +132,7 @@ impl TranscriptionService {
                 provider,
                 model_path,
                 gpu_enabled,
+                threads,
             });
 
             let mut status = self.status.write();
@@ -180,7 +185,7 @@ impl TranscriptionService {
             }
             ConfigProvider::Local => {
                 let model_path = crate::config::models_dir()
-                    .join(config.transcription.local.model.filename());
+                    .join(config.transcription.local.model_filename());
                 let threads = config.transcription.local.threads;
                 let gpu_enabled = config.transcription.local.gpu_enabled;
 
@@ -220,7 +225,7 @@ impl TranscriptionService {
         result
     }
 
-    /// Process recording: resample, transcribe, and output
+    /// Process recording: resample, apply VAD, transcribe, and output
     pub async fn process_recording(
         self: &Arc<Self>,
         app: &AppHandle,
@@ -248,8 +253,57 @@ impl TranscriptionService {
         // Get config
         let config = state.config.read().clone();
 
+        // Apply Voice Activity Detection if enabled
+        let samples_for_transcription = if config.audio.vad.enabled {
+            let vad_mode = match config.audio.vad.aggressiveness {
+                0 => VadAggressiveness::Quality,
+                1 => VadAggressiveness::LowBitrate,
+                2 => VadAggressiveness::Aggressive,
+                _ => VadAggressiveness::VeryAggressive,
+            };
+
+            let vad_config = VadConfig {
+                mode: vad_mode,
+                min_speech_duration_ms: config.audio.vad.min_speech_duration_ms,
+                padding_ms: config.audio.vad.padding_ms,
+                frame_duration_ms: 30,
+            };
+
+            let vad = VoiceActivityDetector::with_config(vad_config);
+
+            match vad.filter_speech(&samples, WHISPER_SAMPLE_RATE) {
+                Ok(vad_result) => {
+                    tracing::info!(
+                        "VAD filtered: {:.1}% speech ({} segments), {}ms -> {}ms",
+                        vad_result.speech_percentage,
+                        vad_result.speech_segments,
+                        vad_result.original_duration_ms,
+                        vad_result.speech_duration_ms
+                    );
+
+                    // If no speech detected, return early
+                    if vad_result.audio.is_empty() || vad_result.speech_percentage < 1.0 {
+                        return Err("No speech detected in recording".to_string());
+                    }
+
+                    vad_result.audio
+                }
+                Err(e) => {
+                    tracing::warn!("VAD failed, using full audio: {}", e);
+                    samples.clone()
+                }
+            }
+        } else {
+            samples.clone()
+        };
+
+        // Calculate audio durations for metrics
+        let original_audio_ms = (samples.len() as u64 * 1000) / WHISPER_SAMPLE_RATE as u64;
+        let filtered_audio_ms = (samples_for_transcription.len() as u64 * 1000) / WHISPER_SAMPLE_RATE as u64;
+        let vad_was_enabled = config.audio.vad.enabled;
+
         // Perform transcription
-        let result = self.transcribe(&samples, &config).await;
+        let result = self.transcribe(&samples_for_transcription, &config).await;
 
         match result {
             Ok(transcription) => {
@@ -260,6 +314,20 @@ impl TranscriptionService {
                     transcription.duration_ms,
                     transcription.provider
                 );
+
+                // Record performance metrics
+                let record = TranscriptionRecord::builder()
+                    .audio_duration_ms(original_audio_ms)
+                    .processing_time_ms(transcription.duration_ms)
+                    .provider(&transcription.provider)
+                    .model(format!("{:?}", config.transcription.local.model).to_lowercase())
+                    .gpu_used(config.transcription.local.gpu_enabled)
+                    .threads_used(config.transcription.local.threads)
+                    .vad_enabled(vad_was_enabled)
+                    .vad_filtered_ms(filtered_audio_ms)
+                    .result_chars(text.len())
+                    .build();
+                metrics().write().record_transcription(record);
 
                 // Save to history with audio (only if not empty)
                 if !text.is_empty() {

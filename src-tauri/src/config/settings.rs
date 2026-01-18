@@ -187,7 +187,9 @@ impl GpuBackend {
 pub struct LocalTranscriptionSettings {
     /// Whisper model size
     pub model: WhisperModel,
-    /// Number of CPU threads
+    /// Model quantization level (F16, Q8_0, Q5_1)
+    pub quantization: ModelQuantization,
+    /// Number of CPU threads (0 = auto-detect optimal)
     pub threads: usize,
     /// Enable GPU acceleration
     pub gpu_enabled: bool,
@@ -199,10 +201,70 @@ impl Default for LocalTranscriptionSettings {
     fn default() -> Self {
         Self {
             model: WhisperModel::Small,
-            threads: 4,
+            quantization: ModelQuantization::F16,
+            threads: 0, // Auto-detect
             gpu_enabled: false,
             gpu_backend: GpuBackend::Cpu,
         }
+    }
+}
+
+impl LocalTranscriptionSettings {
+    /// Get the full model filename including quantization
+    pub fn model_filename(&self) -> String {
+        self.model.filename_with_quantization(&self.quantization)
+    }
+
+    /// Get estimated model size in bytes
+    pub fn estimated_model_size(&self) -> u64 {
+        self.model.size_bytes_with_quantization(&self.quantization)
+    }
+}
+
+/// Quantization type for Whisper models
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ModelQuantization {
+    /// Full precision (f16) - highest quality, largest size
+    #[default]
+    F16,
+    /// 8-bit quantization - good quality/size balance
+    Q8_0,
+    /// 5-bit quantization - smallest size, slightly lower quality
+    Q5_1,
+}
+
+impl ModelQuantization {
+    /// Get the filename suffix for this quantization type
+    pub fn filename_suffix(&self) -> &'static str {
+        match self {
+            Self::F16 => "",
+            Self::Q8_0 => "-q8_0",
+            Self::Q5_1 => "-q5_1",
+        }
+    }
+
+    /// Get display name for UI
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::F16 => "Full Precision (F16)",
+            Self::Q8_0 => "8-bit Quantized (Q8_0)",
+            Self::Q5_1 => "5-bit Quantized (Q5_1)",
+        }
+    }
+
+    /// Get memory reduction factor compared to F16
+    pub fn memory_factor(&self) -> f32 {
+        match self {
+            Self::F16 => 1.0,
+            Self::Q8_0 => 0.5,  // ~50% of original
+            Self::Q5_1 => 0.35, // ~35% of original
+        }
+    }
+
+    /// Get all available quantization types
+    pub fn all() -> &'static [ModelQuantization] {
+        &[Self::F16, Self::Q8_0, Self::Q5_1]
     }
 }
 
@@ -218,7 +280,7 @@ pub enum WhisperModel {
 }
 
 impl WhisperModel {
-    /// Get model filename
+    /// Get model filename (for F16/standard model)
     pub fn filename(&self) -> &'static str {
         match self {
             Self::Tiny => "ggml-tiny.bin",
@@ -229,7 +291,19 @@ impl WhisperModel {
         }
     }
 
-    /// Get approximate model size in bytes
+    /// Get model filename with specific quantization
+    pub fn filename_with_quantization(&self, quant: &ModelQuantization) -> String {
+        let base_name = match self {
+            Self::Tiny => "ggml-tiny",
+            Self::Base => "ggml-base",
+            Self::Small => "ggml-small",
+            Self::Medium => "ggml-medium",
+            Self::Large => "ggml-large",
+        };
+        format!("{}{}.bin", base_name, quant.filename_suffix())
+    }
+
+    /// Get approximate model size in bytes for F16
     pub fn size_bytes(&self) -> u64 {
         match self {
             Self::Tiny => 75_000_000,
@@ -238,6 +312,27 @@ impl WhisperModel {
             Self::Medium => 1_500_000_000,
             Self::Large => 2_900_000_000,
         }
+    }
+
+    /// Get approximate model size with quantization
+    pub fn size_bytes_with_quantization(&self, quant: &ModelQuantization) -> u64 {
+        (self.size_bytes() as f64 * quant.memory_factor() as f64) as u64
+    }
+
+    /// Get model display name
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::Tiny => "Tiny (~75MB)",
+            Self::Base => "Base (~142MB)",
+            Self::Small => "Small (~466MB)",
+            Self::Medium => "Medium (~1.5GB)",
+            Self::Large => "Large (~2.9GB)",
+        }
+    }
+
+    /// Get all model sizes
+    pub fn all() -> &'static [WhisperModel] {
+        &[Self::Tiny, Self::Base, Self::Small, Self::Medium, Self::Large]
     }
 }
 
@@ -296,12 +391,40 @@ impl GroqSettings {
 pub struct AudioSettings {
     /// Input device ID (None = default)
     pub input_device: Option<String>,
+    /// Voice Activity Detection settings
+    pub vad: VadSettings,
 }
 
 impl Default for AudioSettings {
     fn default() -> Self {
         Self {
             input_device: None,
+            vad: VadSettings::default(),
+        }
+    }
+}
+
+/// Voice Activity Detection settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct VadSettings {
+    /// Enable VAD filtering before transcription
+    pub enabled: bool,
+    /// VAD aggressiveness (0-3, higher = more aggressive)
+    pub aggressiveness: u8,
+    /// Minimum speech segment duration in ms
+    pub min_speech_duration_ms: u32,
+    /// Padding around speech segments in ms
+    pub padding_ms: u32,
+}
+
+impl Default for VadSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,  // Enable by default for performance
+            aggressiveness: 2, // Aggressive mode
+            min_speech_duration_ms: 100,
+            padding_ms: 300,
         }
     }
 }

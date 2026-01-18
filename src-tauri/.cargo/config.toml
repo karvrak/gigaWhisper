@@ -1,0 +1,78 @@
+# Cargo configuration for GigaWhisper
+#
+# This file configures build optimizations for maximum performance.
+# SIMD instructions (AVX2/AVX512) are enabled automatically based on the build target.
+
+# =============================================================================
+# SIMD Optimization Configuration
+# =============================================================================
+#
+# whisper.cpp benefits significantly from SIMD instructions:
+# - AVX2: ~2x speedup on modern Intel/AMD CPUs (2013+)
+# - AVX-512: ~3x speedup on supported CPUs (Intel Skylake-X, AMD Zen 4+)
+#
+# The "native" target-cpu enables all instructions supported by the build machine.
+# This is optimal for local builds but may cause issues if distributing binaries
+# to machines with older CPUs.
+#
+# For distribution builds, consider using:
+#   - target-cpu=haswell (AVX2 baseline, works on most modern CPUs)
+#   - target-cpu=x86-64 (maximum compatibility, no advanced SIMD)
+
+[target.x86_64-pc-windows-msvc]
+# Use native CPU features for maximum performance on the build machine
+# This enables AVX, AVX2, FMA, and AVX-512 if supported
+rustflags = ["-C", "target-cpu=native"]
+
+[target.x86_64-pc-windows-gnu]
+rustflags = ["-C", "target-cpu=native"]
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "target-cpu=native"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "target-cpu=native"]
+
+[target.aarch64-apple-darwin]
+# Apple Silicon has NEON SIMD by default
+rustflags = ["-C", "target-cpu=native"]
+
+# =============================================================================
+# Build Profiles (additional to Cargo.toml)
+# =============================================================================
+
+[profile.release]
+# Enable Link-Time Optimization for smaller, faster binaries
+# Note: LTO is already configured in Cargo.toml, this is for reference
+# lto = true
+
+# =============================================================================
+# Environment Variables
+# =============================================================================
+
+[env]
+# whisper.cpp build configuration
+# These are passed to the whisper-rs-sys build script
+
+# Uncomment to force specific SIMD level (usually auto-detected):
+# WHISPER_NO_AVX = "0"
+# WHISPER_NO_AVX2 = "0"
+# WHISPER_NO_FMA = "0"
+# WHISPER_NO_F16C = "0"
+
+# =============================================================================
+# Alias Commands
+# =============================================================================
+
+[alias]
+# Build with GPU support (Vulkan - AMD/Intel/NVIDIA)
+build-vulkan = "build --release --features gpu-vulkan"
+
+# Build with GPU support (CUDA - NVIDIA only, best performance)
+build-cuda = "build --release --features gpu-cuda"
+
+# Build CPU-only (maximum compatibility)
+build-cpu = "build --release"
+
+# Build with haswell target (AVX2 baseline for distribution)
+build-dist = "build --release --config target.x86_64-pc-windows-msvc.rustflags=['-C','target-cpu=haswell']"

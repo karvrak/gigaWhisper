@@ -1,8 +1,9 @@
 //! Model Downloader
 //!
 //! Download Whisper models from Hugging Face with cancellation support.
+//! Supports both standard (F16) and quantized (Q8_0, Q5_1) models.
 
-use crate::config::WhisperModel;
+use crate::config::{ModelQuantization, WhisperModel};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -10,7 +11,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 
-/// Base URL for model downloads
+/// Base URL for model downloads (both standard F16 and quantized models)
 const MODEL_BASE_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main";
 
 /// Download progress callback
@@ -129,16 +130,33 @@ pub fn download_manager() -> &'static DownloadManager {
     &DOWNLOAD_MANAGER
 }
 
-/// Download a Whisper model with cancellation support
+/// Download a Whisper model with cancellation support (F16 by default)
 pub async fn download_model(
     model: &WhisperModel,
+    dest_dir: PathBuf,
+    progress: Option<ProgressCallback>,
+) -> Result<PathBuf, DownloadError> {
+    download_model_with_quantization(model, &ModelQuantization::F16, dest_dir, progress).await
+}
+
+/// Download a Whisper model with specific quantization
+pub async fn download_model_with_quantization(
+    model: &WhisperModel,
+    quantization: &ModelQuantization,
     dest_dir: PathBuf,
     progress: Option<ProgressCallback>,
 ) -> Result<PathBuf, DownloadError> {
     // Get cancellation token from manager
     let cancel_token = download_manager().start_download(model);
 
-    let result = download_model_internal(model, dest_dir, progress, &cancel_token).await;
+    let result = download_model_internal_with_quantization(
+        model,
+        quantization,
+        dest_dir,
+        progress,
+        &cancel_token,
+    )
+    .await;
 
     // Remove from active downloads
     download_manager().complete_download(model);
@@ -178,9 +196,10 @@ fn get_available_space(_path: &std::path::Path) -> Option<u64> {
     None
 }
 
-/// Internal download implementation with cancellation
-async fn download_model_internal(
+/// Internal download implementation with quantization support
+async fn download_model_internal_with_quantization(
     model: &WhisperModel,
+    quantization: &ModelQuantization,
     dest_dir: PathBuf,
     progress: Option<ProgressCallback>,
     cancel_token: &CancellationToken,
@@ -189,7 +208,7 @@ async fn download_model_internal(
     tokio::fs::create_dir_all(&dest_dir).await?;
 
     // Check disk space before downloading
-    let model_size = model.size_bytes();
+    let model_size = model.size_bytes_with_quantization(quantization);
     if let Some(available) = get_available_space(&dest_dir) {
         // Need extra 10% buffer for safety
         let needed = (model_size as f64 * 1.1) as u64;
@@ -202,9 +221,9 @@ async fn download_model_internal(
         tracing::info!("Disk space check passed: {} bytes available, {} bytes needed", available, needed);
     }
 
-    let filename = model.filename();
+    let filename = model.filename_with_quantization(quantization);
     let url = format!("{}/{}", MODEL_BASE_URL, filename);
-    let dest_path = dest_dir.join(filename);
+    let dest_path = dest_dir.join(&filename);
 
     tracing::info!("Downloading model from: {}", url);
 

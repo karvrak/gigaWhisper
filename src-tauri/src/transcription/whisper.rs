@@ -2,8 +2,10 @@
 //!
 //! Local transcription using whisper-rs bindings.
 //! Supports GPU acceleration via Vulkan (AMD/Intel/NVIDIA) or CUDA (NVIDIA).
+//! Includes automatic CPU thread optimization.
 
 use super::{TranscriptionConfig, TranscriptionError, TranscriptionProvider, TranscriptionResult};
+use crate::utils::get_optimal_threads;
 use async_trait::async_trait;
 use parking_lot::Mutex;
 use std::path::PathBuf;
@@ -14,29 +16,50 @@ use std::time::Instant;
 pub struct WhisperProvider {
     model_path: PathBuf,
     context: Arc<Mutex<Option<whisper_rs::WhisperContext>>>,
-    threads: usize,
+    /// Configured threads (0 = auto-detect)
+    configured_threads: usize,
+    /// Actual threads to use (resolved from configured or auto-detected)
+    effective_threads: usize,
     gpu_enabled: bool,
 }
 
 impl WhisperProvider {
     /// Create a new Whisper provider
+    ///
+    /// If `threads` is 0, auto-detects optimal thread count based on CPU.
     pub fn new(model_path: PathBuf, threads: usize) -> Self {
+        let effective_threads = get_optimal_threads(threads);
         Self {
             model_path,
             context: Arc::new(Mutex::new(None)),
-            threads,
+            configured_threads: threads,
+            effective_threads,
             gpu_enabled: false,
         }
     }
 
     /// Create a new Whisper provider with GPU acceleration
+    ///
+    /// If `threads` is 0, auto-detects optimal thread count based on CPU.
     pub fn with_gpu(model_path: PathBuf, threads: usize, gpu_enabled: bool) -> Self {
+        let effective_threads = get_optimal_threads(threads);
         Self {
             model_path,
             context: Arc::new(Mutex::new(None)),
-            threads,
+            configured_threads: threads,
+            effective_threads,
             gpu_enabled,
         }
+    }
+
+    /// Get the number of threads being used
+    pub fn threads(&self) -> usize {
+        self.effective_threads
+    }
+
+    /// Check if threads were auto-detected
+    pub fn is_auto_threads(&self) -> bool {
+        self.configured_threads == 0
     }
 
     /// Check if GPU acceleration is available in this build
@@ -95,9 +118,11 @@ impl WhisperProvider {
 
         *self.context.lock() = Some(ctx);
         tracing::info!(
-            "Whisper model loaded: {:?} (GPU: {})",
+            "Whisper model loaded: {:?} (GPU: {}, threads: {}{})",
             self.model_path,
-            if use_gpu { "enabled" } else { "disabled" }
+            if use_gpu { "enabled" } else { "disabled" },
+            self.effective_threads,
+            if self.is_auto_threads() { " auto-detected" } else { "" }
         );
 
         Ok(())
@@ -184,7 +209,8 @@ impl Clone for WhisperProvider {
         Self {
             model_path: self.model_path.clone(),
             context: self.context.clone(),
-            threads: self.threads,
+            configured_threads: self.configured_threads,
+            effective_threads: self.effective_threads,
             gpu_enabled: self.gpu_enabled,
         }
     }
@@ -206,7 +232,7 @@ impl TranscriptionProvider for WhisperProvider {
         let context = self.context.clone();
         let audio_vec = audio.to_vec();
         let config_clone = config.clone();
-        let threads = self.threads;
+        let threads = self.effective_threads;
 
         // Run transcription in blocking thread pool
         // This avoids holding the MutexGuard across an await point
