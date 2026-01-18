@@ -61,9 +61,10 @@ jobs:
           - variant: vulkan
             features: "--features gpu-vulkan"
             artifact_suffix: "vulkan"
-          - variant: cuda
-            features: "--features gpu-cuda"
-            artifact_suffix: "cuda"
+          # CUDA disabled for now - requires complex CI setup
+          # - variant: cuda
+          #   features: "--features gpu-cuda"
+          #   artifact_suffix: "cuda"
 
     steps:
       - uses: actions/checkout@v4
@@ -88,14 +89,14 @@ jobs:
           workspaces: src-tauri
           key: ${{ matrix.variant }}
 
-      # CUDA setup (only for cuda variant)
-      - name: Setup CUDA
-        if: matrix.variant == 'cuda'
-        uses: Jimver/cuda-toolkit@v0.2.16
-        with:
-          cuda: '12.4.0'
-          method: 'network'
-          sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "visual_studio_integration"]'
+      # CUDA setup disabled - too complex for CI
+      # - name: Setup CUDA
+      #   if: matrix.variant == 'cuda'
+      #   uses: Jimver/cuda-toolkit@v0.2.16
+      #   with:
+      #     cuda: '12.4.0'
+      #     method: 'network'
+      #     sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "visual_studio_integration"]'
 
       # Vulkan SDK setup (only for vulkan variant)
       - name: Setup Vulkan SDK
