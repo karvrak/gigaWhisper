@@ -10,6 +10,8 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # Force compatible CPU target to avoid illegal instruction errors
+  RUSTFLAGS: "-C target-cpu=x86-64-v2"
 
 jobs:
   # ============================================
@@ -87,7 +89,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          key: ${{ matrix.variant }}
+          key: ${{ matrix.variant }}-v2
+          # Fresh cache to avoid corrupted artifacts
 
       # CUDA setup disabled - too complex for CI
       # - name: Setup CUDA
