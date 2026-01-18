@@ -88,8 +88,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          key: ${{ matrix.variant }}-v2
-          # Fresh cache to avoid corrupted artifacts
+          key: ${{ matrix.variant }}-v3
+          # Fresh cache - v3 to clear corrupted artifact names
 
       # CUDA setup (only for cuda variant)
       - name: Setup CUDA
