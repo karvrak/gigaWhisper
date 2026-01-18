@@ -5,6 +5,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { PopupOverlay } from './components/PopupOverlay';
 import { HistoryPanel } from './components/HistoryPanel';
 import { Onboarding } from './components/Onboarding';
+import { UpdateNotification } from './components/UpdateNotification';
 import { useSettings } from './hooks/useSettings';
 import { Minus, X } from 'lucide-react';
 
@@ -204,6 +205,9 @@ function App() {
 
       {/* Popup overlay for showing transcription when no text field is active */}
       <PopupOverlay />
+
+      {/* Update notification */}
+      <UpdateNotification />
 
       {/* Onboarding for new users */}
       {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}

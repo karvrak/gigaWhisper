@@ -17,6 +17,7 @@
     "global-shortcut:default",
     "clipboard-manager:default",
     "notification:default",
-    "shell:default"
+    "shell:default",
+    "updater:default"
   ]
 }

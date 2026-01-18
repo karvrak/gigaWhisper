@@ -100,6 +100,12 @@
     "notification": null,
     "shell": {
       "open": true
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/karvrak/gigaWhisper/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNFMDBGMURFMjk5NjA2RTQKUldUa0JwWXAzdkVBUG9yZWhibkFBS0tkbUprNEMxMmFjN1JldFFIRVlQWWZ1NVZaenpBeXNmYmsK"
     }
   }
 }

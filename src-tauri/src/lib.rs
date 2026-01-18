@@ -11,6 +11,7 @@ pub mod output;
 pub mod shortcuts;
 pub mod transcription;
 pub mod tray;
+pub mod updater;
 pub mod utils;
 
 use parking_lot::Mutex;
@@ -78,6 +79,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(app_state)
         .setup(move |app| {
             // Setup system tray
@@ -99,6 +101,14 @@ pub fn run() {
                     window.set_focus()?;
                 }
             }
+
+            // Check for updates in the background
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                // Small delay to let the app fully initialize
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                updater::check_for_updates(app_handle).await;
+            });
 
             tracing::info!("GigaWhisper setup complete");
             Ok(())
@@ -150,6 +160,8 @@ pub fn run() {
             commands::history::clear_history,
             commands::history::get_history_count,
             commands::history::get_audio_data,
+            updater::install_update,
+            updater::restart_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
