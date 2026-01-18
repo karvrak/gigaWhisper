@@ -100,6 +100,52 @@ jobs:
           method: 'network'
           sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "visual_studio_integration"]'
 
+      # Copy CUDA DLLs for bundling (only for cuda variant)
+      - name: Copy CUDA DLLs
+        if: matrix.variant == 'cuda'
+        shell: pwsh
+        run: |
+          $cudaPath = $env:CUDA_PATH
+          Write-Host "CUDA_PATH: $cudaPath"
+
+          # Create resources directory
+          $resourcesDir = "src-tauri/resources"
+          New-Item -ItemType Directory -Force -Path $resourcesDir
+
+          # Copy CUDA runtime DLLs
+          $dllsToCopy = @(
+            "cudart64_12.dll",
+            "cublas64_12.dll",
+            "cublasLt64_12.dll"
+          )
+
+          foreach ($dll in $dllsToCopy) {
+            $sourcePath = Join-Path $cudaPath "bin" $dll
+            if (Test-Path $sourcePath) {
+              Copy-Item $sourcePath $resourcesDir -Force
+              Write-Host "Copied $dll"
+            } else {
+              Write-Host "Warning: $dll not found at $sourcePath"
+              # Try alternative names for different CUDA versions
+              $altDll = $dll -replace "64_12", "64_*"
+              $found = Get-ChildItem -Path (Join-Path $cudaPath "bin") -Filter $altDll -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                Copy-Item $found.FullName $resourcesDir -Force
+                Write-Host "Copied alternative: $($found.Name)"
+              }
+            }
+          }
+
+          # List copied DLLs
+          Write-Host "Resources directory contents:"
+          Get-ChildItem $resourcesDir
+
+          # Update tauri.conf.json to include CUDA DLLs
+          $tauriConf = Get-Content "src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json
+          $tauriConf.bundle.resources = @{ "resources/*.dll" = "./" }
+          $tauriConf | ConvertTo-Json -Depth 20 | Set-Content "src-tauri/tauri.conf.json" -Encoding UTF8
+          Write-Host "Updated tauri.conf.json to include CUDA DLLs"
+
       # Vulkan SDK setup (only for vulkan variant)
       - name: Setup Vulkan SDK
         if: matrix.variant == 'vulkan'
