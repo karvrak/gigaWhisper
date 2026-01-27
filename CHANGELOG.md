@@ -7,8 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2025-01-27
+
 ### Added
+- SECURITY.md and CHANGELOG.md documentation
 - Codecov integration for test coverage reporting
+- Playwright E2E test infrastructure
+- Comprehensive unit tests (142 tests, ~65% coverage)
+- ADRs for code signing, config migration, crash reporting
+
+### Fixed
+- Path traversal vulnerability in history commands
+- Audio normalization NaN panic
+- Test selector ambiguity in SettingsPanel
+
+### Changed
+- Updated .gitignore for test artifacts
 
 ## [1.0.2] - 2025-01-26
 
