@@ -56,6 +56,7 @@ anyhow = "1"
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
 
 # Clipboard
 arboard = "3"
@@ -81,6 +82,9 @@ hound = "3.5"
 # Encoding
 base64 = "0.22"
 
+# Cryptographic hashing for model verification
+sha2 = "0.10"
+
 # Windows-specific dependencies
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = [
@@ -104,6 +108,10 @@ custom-protocol = ["tauri/custom-protocol"]
 # Use: cargo build --features gpu-cuda (for NVIDIA only, better performance)
 gpu-vulkan = ["whisper-rs/vulkan"]
 gpu-cuda = ["whisper-rs/cuda"]
+
+[dev-dependencies]
+tempfile = "3"
+mockito = "1"
 
 [profile.release]
 panic = "abort"

@@ -18,7 +18,8 @@ pub mod utils;
 use parking_lot::Mutex;
 use std::sync::Arc;
 use tauri::Manager;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Application state shared across all components
 pub struct AppState {
@@ -40,17 +41,71 @@ pub enum RecordingState {
     Error(String),
 }
 
-/// Initialize and run the Tauri application
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    // Initialize logging
+/// Get the log directory path
+fn log_dir() -> std::path::PathBuf {
+    directories::ProjectDirs::from("com", "gigawhisper", "GigaWhisper")
+        .map(|dirs| dirs.data_dir().to_path_buf())
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+        .join("logs")
+}
+
+/// Initialize logging with console and file output
+/// Returns a guard that must be kept alive for the duration of the application
+fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
+    // Initialize logging with appropriate level based on build mode
+    #[cfg(debug_assertions)]
+    let default_filter = "gigawhisper=debug,tauri=info";
+    #[cfg(not(debug_assertions))]
+    let default_filter = "gigawhisper=info,tauri=warn";
+
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| default_filter.into());
+
+    // Set up file appender with daily rotation (keeps 7 days of logs)
+    let log_directory = log_dir();
+
+    // Ensure the log directory exists
+    let _ = std::fs::create_dir_all(&log_directory);
+
+    let file_appender = RollingFileAppender::builder()
+        .rotation(Rotation::DAILY)
+        .max_log_files(7)
+        .filename_prefix("gigawhisper")
+        .filename_suffix("log")
+        .build(&log_directory)
+        .expect("Failed to create log file appender");
+
+    // Create a non-blocking writer for the file appender
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+    // Build the subscriber with both console and file output
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| "gigawhisper=debug,tauri=info".into()))
-        .with(tracing_subscriber::fmt::layer())
+        .with(env_filter)
+        .with(
+            fmt::layer()
+                .with_ansi(true)
+                .with_target(true)
+                .with_thread_ids(false)
+        )
+        .with(
+            fmt::layer()
+                .with_ansi(false)
+                .with_target(true)
+                .with_writer(non_blocking)
+        )
         .init();
 
     tracing::info!("Starting GigaWhisper");
+    tracing::info!("Log files stored in: {:?}", log_directory);
+
+    guard
+}
+
+/// Initialize and run the Tauri application
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    // Initialize logging - keep guard alive for the duration of the application
+    let _log_guard = init_logging();
 
     // Check if this is the first launch (no settings file yet)
     let is_first_launch = !config::config_file().exists();

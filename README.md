@@ -5,6 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://github.com/karvrak/gigaWhisper/releases)
 [![Tauri](https://img.shields.io/badge/Built%20with-Tauri-FFC131?logo=tauri)](https://tauri.app/)
+[![codecov](https://codecov.io/gh/karvrak/gigaWhisper/graph/badge.svg)](https://codecov.io/gh/karvrak/gigaWhisper)
+[![CI](https://github.com/karvrak/gigaWhisper/actions/workflows/ci.yml/badge.svg)](https://github.com/karvrak/gigaWhisper/actions/workflows/ci.yml)
 
 > A lightweight, privacy-focused alternative to SuperWhisper. Powered by OpenAI Whisper for accurate speech-to-text, running locally or in the cloud.
 

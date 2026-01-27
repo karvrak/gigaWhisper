@@ -18,6 +18,12 @@ pub struct ActiveWindow {
 pub fn get_active_window() -> Option<ActiveWindow> {
     use windows::Win32::UI::WindowsAndMessaging::*;
 
+    // SAFETY: These Windows API calls are safe because:
+    // - GetForegroundWindow returns a valid HWND or null (we check for null)
+    // - GetWindowTextW reads into a stack-allocated buffer of known size
+    // - GetWindowThreadProcessId writes to a valid mutable reference
+    // - All handles and buffers are properly sized and aligned
+    // - No memory is allocated that requires manual deallocation
     unsafe {
         let hwnd = GetForegroundWindow();
         if hwnd.0 == std::ptr::null_mut() {
@@ -60,6 +66,11 @@ fn get_process_name(pid: u32) -> Option<String> {
         OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ,
     };
 
+    // SAFETY: These Windows API calls are safe because:
+    // - OpenProcess returns a valid handle or fails (we use .ok()? to handle failure)
+    // - GetModuleBaseNameW reads into a stack-allocated buffer of known size
+    // - CloseHandle properly releases the process handle we obtained
+    // - The handle is closed in all code paths (success or early return)
     unsafe {
         let handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid).ok()?;
 
@@ -82,6 +93,11 @@ fn check_text_input(_hwnd: windows::Win32::Foundation::HWND) -> bool {
     use windows::Win32::UI::Input::KeyboardAndMouse::GetFocus;
     use windows::Win32::UI::WindowsAndMessaging::*;
 
+    // SAFETY: These Windows API calls are safe because:
+    // - GetFocus returns a valid HWND or null (we check for null)
+    // - GetClassNameW reads into a stack-allocated buffer of known size
+    // - No memory allocation or resource handles require cleanup
+    // - Buffer size is sufficient for any Windows class name
     unsafe {
         let focus = GetFocus();
         if focus.0 == std::ptr::null_mut() {

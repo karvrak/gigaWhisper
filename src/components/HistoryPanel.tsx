@@ -151,21 +151,21 @@ export function HistoryPanel() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+      <div className="flex items-center justify-center py-12">
+        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-2xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">Transcription History</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Transcription History</h2>
         {entries.length > 0 && (
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="text-sm text-red-500 hover:text-red-600 flex items-center gap-1"
+            className="text-sm text-red-500 hover:text-red-600 flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors duration-150"
           >
             <Trash2 className="w-4 h-4" />
             Clear All
@@ -175,10 +175,12 @@ export function HistoryPanel() {
 
       {/* Empty state */}
       {entries.length === 0 && (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>No transcriptions yet</p>
-          <p className="text-sm mt-1">
+        <div className="card p-12 text-center">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center">
+            <Clock className="w-7 h-7 text-gray-400 dark:text-gray-500" />
+          </div>
+          <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No transcriptions yet</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Your transcription history will appear here
           </p>
         </div>
@@ -189,7 +191,7 @@ export function HistoryPanel() {
         {entries.map((entry) => (
           <div
             key={entry.id}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 group"
+            className="card p-4 group hover:shadow-md transition-shadow duration-200"
           >
             {/* Text content */}
             <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
@@ -255,30 +257,30 @@ export function HistoryPanel() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/50"
+            className="modal-backdrop"
             onClick={() => setShowClearConfirm(false)}
           />
           {/* Modal */}
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-sm mx-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="modal-content relative bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
+              <div className="p-2.5 bg-red-50 dark:bg-red-500/10 rounded-xl">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
               </div>
-              <h3 className="text-lg font-semibold">Clear All History</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Clear All History</h3>
             </div>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
               Are you sure you want to delete all transcriptions? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors duration-150"
               >
                 Cancel
               </button>
               <button
                 onClick={clearAllHistory}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors duration-150"
               >
                 Delete All
               </button>

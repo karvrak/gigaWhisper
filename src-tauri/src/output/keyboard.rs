@@ -20,6 +20,13 @@ pub enum KeyboardError {
 pub fn send_ctrl_v() -> Result<(), KeyboardError> {
     use std::mem::size_of;
 
+    // SAFETY: SendInput is safe to call because:
+    // - The INPUT array is properly initialized with valid keyboard input structures
+    // - All virtual key codes (VK_CONTROL=0x11, VK_V=0x56) are valid Windows constants
+    // - The array is stack-allocated with known size, passed by reference
+    // - size_of::<INPUT>() correctly computes the structure size
+    // - We check the return value to detect partial failures
+    // - No memory allocation or handles require cleanup
     unsafe {
         let inputs = [
             // Ctrl down
@@ -96,6 +103,12 @@ pub fn type_text(text: &str) -> Result<(), KeyboardError> {
     use std::mem::size_of;
 
     for c in text.chars() {
+        // SAFETY: SendInput with Unicode characters is safe because:
+        // - KEYEVENTF_UNICODE flag tells Windows to interpret wScan as a Unicode character
+        // - Rust chars are valid Unicode scalar values, safe to cast to u16 for BMP chars
+        // - The INPUT array is properly initialized and stack-allocated
+        // - We check return value and propagate errors on failure
+        // - Small sleep between characters prevents input buffer overflow
         unsafe {
             let inputs = [
                 // Key down with Unicode

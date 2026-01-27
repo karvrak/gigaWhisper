@@ -52,7 +52,7 @@ pub fn normalize(samples: &mut [f32]) {
     let max = samples
         .iter()
         .map(|s| s.abs())
-        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
         .unwrap_or(1.0);
 
     if max > 0.0 && max != 1.0 {
@@ -171,5 +171,133 @@ mod tests {
 
         assert!(!has_voice_activity(&silence, 0.1));
         assert!(has_voice_activity(&voice, 0.1));
+    }
+
+    #[test]
+    fn test_has_voice_activity_empty() {
+        let empty: Vec<f32> = vec![];
+        assert!(!has_voice_activity(&empty, 0.1));
+    }
+
+    #[test]
+    fn test_has_voice_activity_edge_cases() {
+        // Very low threshold
+        let low_signal = vec![0.01; 100];
+        assert!(has_voice_activity(&low_signal, 0.001));
+        assert!(!has_voice_activity(&low_signal, 0.1));
+
+        // Mixed signal
+        let mixed = vec![0.0, 0.5, 0.0, 0.5, 0.0];
+        let rms = (mixed.iter().map(|s| s * s).sum::<f32>() / mixed.len() as f32).sqrt();
+        assert!(has_voice_activity(&mixed, rms - 0.01));
+    }
+
+    #[test]
+    fn test_duration_seconds() {
+        assert_eq!(duration_seconds(16000, 16000), 1.0);
+        assert_eq!(duration_seconds(8000, 16000), 0.5);
+        assert_eq!(duration_seconds(48000, 16000), 3.0);
+        assert_eq!(duration_seconds(0, 16000), 0.0);
+    }
+
+    #[test]
+    fn test_normalize_empty() {
+        let mut samples: Vec<f32> = vec![];
+        normalize(&mut samples);
+        assert!(samples.is_empty());
+    }
+
+    #[test]
+    fn test_normalize_already_normalized() {
+        let mut samples = vec![-1.0, 0.0, 1.0];
+        normalize(&mut samples);
+        assert_eq!(samples[0], -1.0);
+        assert_eq!(samples[1], 0.0);
+        assert_eq!(samples[2], 1.0);
+    }
+
+    #[test]
+    fn test_normalize_silent() {
+        let mut samples = vec![0.0, 0.0, 0.0];
+        normalize(&mut samples);
+        // Should remain unchanged (or at least not crash)
+        assert_eq!(samples, vec![0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn test_encode_wav_header_structure() {
+        let samples = vec![0.0; 100];
+        let wav = encode_wav(&samples, 16000, 1);
+
+        // Check file size (44 byte header + 200 bytes of data)
+        assert_eq!(wav.len(), 44 + 200);
+
+        // Check RIFF chunk
+        assert_eq!(&wav[0..4], b"RIFF");
+
+        // Check file size field (total size - 8)
+        let file_size = u32::from_le_bytes([wav[4], wav[5], wav[6], wav[7]]);
+        assert_eq!(file_size as usize, wav.len() - 8);
+
+        // Check WAVE format
+        assert_eq!(&wav[8..12], b"WAVE");
+
+        // Check fmt chunk
+        assert_eq!(&wav[12..16], b"fmt ");
+
+        // Check fmt chunk size (16 for PCM)
+        let fmt_size = u32::from_le_bytes([wav[16], wav[17], wav[18], wav[19]]);
+        assert_eq!(fmt_size, 16);
+
+        // Check audio format (1 = PCM)
+        let audio_format = u16::from_le_bytes([wav[20], wav[21]]);
+        assert_eq!(audio_format, 1);
+
+        // Check number of channels
+        let num_channels = u16::from_le_bytes([wav[22], wav[23]]);
+        assert_eq!(num_channels, 1);
+
+        // Check sample rate
+        let sample_rate = u32::from_le_bytes([wav[24], wav[25], wav[26], wav[27]]);
+        assert_eq!(sample_rate, 16000);
+
+        // Check data chunk
+        assert_eq!(&wav[36..40], b"data");
+    }
+
+    #[test]
+    fn test_encode_wav_sample_values() {
+        // Test that samples are correctly converted to 16-bit PCM
+        let samples = vec![0.0, 1.0, -1.0, 0.5, -0.5];
+        let wav = encode_wav(&samples, 16000, 1);
+
+        // Data starts at offset 44
+        let data_offset = 44;
+
+        // Sample 0: 0.0 -> 0
+        let s0 = i16::from_le_bytes([wav[data_offset], wav[data_offset + 1]]);
+        assert_eq!(s0, 0);
+
+        // Sample 1: 1.0 -> 32767
+        let s1 = i16::from_le_bytes([wav[data_offset + 2], wav[data_offset + 3]]);
+        assert_eq!(s1, 32767);
+
+        // Sample 2: -1.0 -> -32767
+        let s2 = i16::from_le_bytes([wav[data_offset + 4], wav[data_offset + 5]]);
+        assert_eq!(s2, -32767);
+    }
+
+    #[test]
+    fn test_resample_same_rate() {
+        let samples = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let result = resample(&samples, 16000, 16000).unwrap();
+        assert_eq!(result, samples);
+    }
+
+    #[test]
+    fn test_resample_empty() {
+        let samples: Vec<f32> = vec![];
+        let result = resample(&samples, 44100, 16000).unwrap();
+        assert!(result.is_empty());
     }
 }

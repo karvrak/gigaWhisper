@@ -7,7 +7,7 @@ import { HistoryPanel } from './components/HistoryPanel';
 import { Onboarding } from './components/Onboarding';
 import { UpdateNotification } from './components/UpdateNotification';
 import { useSettings } from './hooks/useSettings';
-import { Minus, X } from 'lucide-react';
+import { Minus, X, Home, Clock, Settings, Mic, Cpu, Cloud, ChevronRight } from 'lucide-react';
 
 const ONBOARDING_KEY = 'gigawhisper_onboarding_completed';
 
@@ -72,8 +72,11 @@ function App() {
 
   if (settingsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">Loading...</span>
+        </div>
       </div>
     );
   }
@@ -87,50 +90,38 @@ function App() {
     await win.hide();
   };
 
+  const navItems = [
+    { id: 'main' as const, label: 'Home', icon: Home },
+    { id: 'history' as const, label: 'History', icon: Clock },
+    { id: 'settings' as const, label: 'Settings', icon: Settings },
+  ];
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
       {/* Custom Titlebar */}
-      <header
-        className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 select-none flex-shrink-0"
-      >
-        <div className="flex items-center h-10">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200/80 dark:border-gray-700/80 select-none flex-shrink-0">
+        <div className="flex items-center h-11">
           {/* Logo - left side */}
-          <div className="w-10 h-10 flex items-center justify-center" data-tauri-drag-region>
-            <img src="/icon.ico" alt="GigaWhisper" className="w-5 h-5" />
+          <div className="w-12 h-11 flex items-center justify-center" data-tauri-drag-region>
+            <img src="/icon.ico" alt="GigaWhisper" className="w-5 h-5 opacity-90" />
           </div>
 
           {/* Navigation - centered */}
           <nav className="flex-1 flex justify-center gap-1" data-tauri-drag-region>
-            <button
-              onClick={() => setView('main')}
-              className={`px-3 py-1 rounded-md text-sm ${
-                view === 'main'
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              Home
-            </button>
-            <button
-              onClick={() => setView('history')}
-              className={`px-3 py-1 rounded-md text-sm ${
-                view === 'history'
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              History
-            </button>
-            <button
-              onClick={() => setView('settings')}
-              className={`px-3 py-1 rounded-md text-sm ${
-                view === 'settings'
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              Settings
-            </button>
+            {navItems.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setView(id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  view === id
+                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{label}</span>
+              </button>
+            ))}
           </nav>
 
           {/* Window Controls */}
@@ -138,7 +129,7 @@ function App() {
             <button
               onClick={handleMinimize}
               onMouseDown={(e) => e.stopPropagation()}
-              className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-11 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors duration-150"
               title="Minimize"
             >
               <Minus className="w-4 h-4 pointer-events-none" />
@@ -146,7 +137,7 @@ function App() {
             <button
               onClick={handleClose}
               onMouseDown={(e) => e.stopPropagation()}
-              className="w-10 h-10 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
+              className="w-11 h-11 flex items-center justify-center text-gray-500 hover:bg-red-500 hover:text-white transition-colors duration-150"
               title="Close"
             >
               <X className="w-4 h-4 pointer-events-none" />
@@ -156,45 +147,66 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden p-5">
         {view === 'main' && (
-          <div className="space-y-6">
-            {/* Shortcut Info */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-lg font-medium mb-4">Keyboard Shortcut</h2>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">
-                  {settings?.recording.mode === 'push-to-talk'
-                    ? 'Hold to record'
-                    : 'Press to toggle recording'}
-                </span>
-                <kbd className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md font-mono text-sm">
-                  {settings?.shortcuts.record || 'Ctrl+Space'}
-                </kbd>
+          <div className="space-y-4 max-w-xl mx-auto animate-fade-in">
+            {/* Welcome Card */}
+            <div className="card p-5">
+              <div className="flex items-start gap-4">
+                <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                  <Mic className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                    Keyboard Shortcut
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                    {settings?.recording.mode === 'push-to-talk'
+                      ? 'Hold the shortcut to record, release to transcribe'
+                      : 'Press once to start, press again to stop recording'}
+                  </p>
+                  <kbd className="inline-flex items-center px-3 py-1.5 text-xs font-medium">
+                    {settings?.shortcuts.record || 'Ctrl+Shift+Space'}
+                  </kbd>
+                </div>
               </div>
             </div>
 
-            {/* Provider Info */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-lg font-medium mb-4">Transcription Provider</h2>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium capitalize">
-                    {settings?.transcription.provider || 'local'}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {settings?.transcription.provider === 'local'
-                      ? `Whisper: ${settings?.transcription.local.model || 'base'}`
-                      : 'Groq API'}
-                  </div>
+            {/* Provider Card */}
+            <div className="card p-5 hover-lift cursor-pointer" onClick={() => setView('settings')}>
+              <div className="flex items-center gap-4">
+                <div className={`p-2.5 rounded-xl ${
+                  settings?.transcription.provider === 'local'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10'
+                    : 'bg-purple-50 dark:bg-purple-500/10'
+                }`}>
+                  {settings?.transcription.provider === 'local' ? (
+                    <Cpu className="w-5 h-5 text-emerald-500" />
+                  ) : (
+                    <Cloud className="w-5 h-5 text-purple-500" />
+                  )}
                 </div>
-                <button
-                  onClick={() => setView('settings')}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  Configure
-                </button>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-0.5">
+                    Transcription Provider
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {settings?.transcription.provider === 'local' ? (
+                      <>Local - Whisper {settings?.transcription.local.model || 'base'}</>
+                    ) : (
+                      <>Cloud - Groq API</>
+                    )}
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
               </div>
+            </div>
+
+            {/* Quick tip */}
+            <div className="text-center pt-2">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                GigaWhisper runs in your system tray. Use the shortcut anywhere to transcribe.
+              </p>
             </div>
           </div>
         )}

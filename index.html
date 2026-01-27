@@ -5,9 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GigaWhisper</title>
     <link rel="icon" type="image/png" href="/icon.png" />
+    <!-- Preconnect for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Inter and JetBrains Mono fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      /* Prevent FOUC (Flash of Unstyled Content) */
+      html {
+        background-color: #f9fafb;
+      }
+      html.dark {
+        background-color: #111827;
+      }
+      /* Smooth loading */
+      body {
+        opacity: 0;
+        transition: opacity 0.15s ease-in;
+      }
+      body.loaded {
+        opacity: 1;
+      }
+    </style>
   </head>
   <body class="bg-gray-50 dark:bg-gray-900">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Mark body as loaded after content is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.classList.add('loaded');
+      });
+    </script>
   </body>
 </html>

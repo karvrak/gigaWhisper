@@ -37,6 +37,11 @@ models/*.bin
 # Test coverage
 coverage/
 
+# Playwright
+playwright-report/
+test-results/
+.playwright/
+
 # Cache
 .cache/
 *.tsbuildinfo
@@ -44,3 +49,7 @@ coverage/
 # Claude Code temp files
 .claude/
 tmpclaude*
+
+# Misc temp files
+nul
+~/

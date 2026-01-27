@@ -33,8 +33,8 @@ impl Default for AudioConfig {
 
 /// Commands sent to the audio worker thread
 enum AudioCommand {
-    Start,
-    Stop,
+    Start(mpsc::Sender<()>),
+    Stop(mpsc::Sender<()>),
     Shutdown,
 }
 
@@ -157,8 +157,9 @@ impl AudioCapture {
 
             loop {
                 match command_rx.recv() {
-                    Ok(AudioCommand::Start) => {
+                    Ok(AudioCommand::Start(ready_tx)) => {
                         if stream.is_some() {
+                            let _ = ready_tx.send(()); // Signal ready even if already recording
                             continue; // Already recording
                         }
 
@@ -226,11 +227,15 @@ impl AudioCapture {
                                 });
                             }
                         }
+                        // Signal that start command has been processed
+                        let _ = ready_tx.send(());
                     }
-                    Ok(AudioCommand::Stop) => {
+                    Ok(AudioCommand::Stop(done_tx)) => {
                         stream = None; // Drop the stream to stop capture
                         *is_recording_clone.lock() = false;
                         tracing::info!("Audio capture stopped");
+                        // Signal that stop command has been processed
+                        let _ = done_tx.send(());
                     }
                     Ok(AudioCommand::Shutdown) | Err(_) => {
                         drop(stream.take()); // Explicitly drop stream to stop capture
@@ -276,26 +281,32 @@ impl AudioCapture {
 
     /// Start capturing audio
     pub fn start(&self) -> Result<(), AudioError> {
+        let (ready_tx, ready_rx) = mpsc::channel();
         self.command_tx
             .lock()
-            .send(AudioCommand::Start)
+            .send(AudioCommand::Start(ready_tx))
             .map_err(|_| AudioError::WorkerError)?;
 
-        // Give the worker thread a moment to start
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        // Wait for worker thread to confirm start (with timeout)
+        ready_rx
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .map_err(|_| AudioError::WorkerError)?;
 
         Ok(())
     }
 
     /// Stop capturing and return captured samples with the device sample rate
     pub fn stop(&self) -> Result<(Vec<f32>, u32), AudioError> {
+        let (done_tx, done_rx) = mpsc::channel();
         self.command_tx
             .lock()
-            .send(AudioCommand::Stop)
+            .send(AudioCommand::Stop(done_tx))
             .map_err(|_| AudioError::WorkerError)?;
 
-        // Give the worker thread a moment to stop
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        // Wait for worker thread to confirm stop (with timeout)
+        done_rx
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .map_err(|_| AudioError::WorkerError)?;
 
         // Get all samples from buffer
         let mut buffer = self.buffer.lock();
@@ -363,11 +374,353 @@ impl Drop for AudioCapture {
 mod tests {
     use super::*;
 
+    // =========================================================================
+    // AudioConfig Tests
+    // =========================================================================
+
+    #[test]
+    fn test_audio_config_default() {
+        let config = AudioConfig::default();
+        assert_eq!(config.sample_rate, 16000);
+        assert_eq!(config.channels, 1);
+        assert_eq!(config.buffer_duration_ms, 100);
+    }
+
+    #[test]
+    fn test_audio_config_custom() {
+        let config = AudioConfig {
+            sample_rate: 44100,
+            channels: 2,
+            buffer_duration_ms: 200,
+        };
+        assert_eq!(config.sample_rate, 44100);
+        assert_eq!(config.channels, 2);
+        assert_eq!(config.buffer_duration_ms, 200);
+    }
+
+    #[test]
+    fn test_audio_config_clone() {
+        let config = AudioConfig::default();
+        let cloned = config.clone();
+        assert_eq!(config.sample_rate, cloned.sample_rate);
+        assert_eq!(config.channels, cloned.channels);
+    }
+
+    // =========================================================================
+    // AudioDevice Tests
+    // =========================================================================
+
+    #[test]
+    fn test_audio_device_struct() {
+        let device = AudioDevice {
+            id: "device-1".to_string(),
+            name: "Test Microphone".to_string(),
+            is_default: true,
+        };
+        assert_eq!(device.id, "device-1");
+        assert_eq!(device.name, "Test Microphone");
+        assert!(device.is_default);
+    }
+
+    #[test]
+    fn test_audio_device_clone() {
+        let device = AudioDevice {
+            id: "device-1".to_string(),
+            name: "Test Microphone".to_string(),
+            is_default: false,
+        };
+        let cloned = device.clone();
+        assert_eq!(device.id, cloned.id);
+        assert_eq!(device.name, cloned.name);
+        assert_eq!(device.is_default, cloned.is_default);
+    }
+
+    // =========================================================================
+    // StreamError Tests
+    // =========================================================================
+
+    #[test]
+    fn test_stream_error_struct() {
+        let error = StreamError {
+            message: "Device disconnected".to_string(),
+            is_disconnection: true,
+        };
+        assert_eq!(error.message, "Device disconnected");
+        assert!(error.is_disconnection);
+    }
+
+    #[test]
+    fn test_stream_error_clone() {
+        let error = StreamError {
+            message: "Test error".to_string(),
+            is_disconnection: false,
+        };
+        let cloned = error.clone();
+        assert_eq!(error.message, cloned.message);
+        assert_eq!(error.is_disconnection, cloned.is_disconnection);
+    }
+
+    // =========================================================================
+    // AudioError Tests
+    // =========================================================================
+
+    #[test]
+    fn test_audio_error_no_host() {
+        let err = AudioError::NoHost;
+        assert!(err.to_string().contains("host"));
+    }
+
+    #[test]
+    fn test_audio_error_no_default_device() {
+        let err = AudioError::NoDefaultDevice;
+        assert!(err.to_string().contains("default"));
+    }
+
+    #[test]
+    fn test_audio_error_device_not_found() {
+        let err = AudioError::DeviceNotFound("MyMic".to_string());
+        let msg = err.to_string();
+        assert!(msg.contains("MyMic"));
+        assert!(msg.contains("not found"));
+    }
+
+    #[test]
+    fn test_audio_error_config_error() {
+        let err = AudioError::ConfigError("Invalid sample rate".to_string());
+        assert!(err.to_string().contains("Invalid sample rate"));
+    }
+
+    #[test]
+    fn test_audio_error_stream_error() {
+        let err = AudioError::StreamError("Stream failed".to_string());
+        assert!(err.to_string().contains("Stream failed"));
+    }
+
+    #[test]
+    fn test_audio_error_play_error() {
+        let err = AudioError::PlayError("Cannot play".to_string());
+        assert!(err.to_string().contains("Cannot play"));
+    }
+
+    #[test]
+    fn test_audio_error_worker_error() {
+        let err = AudioError::WorkerError;
+        assert!(err.to_string().contains("Worker"));
+    }
+
+    // =========================================================================
+    // Device Listing Tests
+    // =========================================================================
+
     #[test]
     fn test_list_devices() {
         // This test may fail on CI without audio devices
         let result = AudioCapture::list_devices();
+        // Just check it doesn't panic - result may be Ok or Err depending on system
+        let _ = result;
+    }
+
+    #[test]
+    fn test_list_devices_result_structure() {
+        let result = AudioCapture::list_devices();
+        if let Ok(devices) = result {
+            // If there are devices, verify structure
+            for device in devices {
+                assert!(!device.id.is_empty());
+                assert!(!device.name.is_empty());
+                // is_default is a boolean, so it's always valid
+            }
+        }
+        // If Err, that's also acceptable (no audio hardware)
+    }
+
+    // =========================================================================
+    // AudioCapture Creation Tests (may require audio device)
+    // =========================================================================
+
+    #[test]
+    fn test_audio_capture_creation() {
+        // This test may fail on CI without audio devices
+        let result = AudioCapture::new(AudioConfig::default());
         // Just check it doesn't panic
         let _ = result;
+    }
+
+    #[test]
+    fn test_audio_capture_with_custom_config() {
+        let config = AudioConfig {
+            sample_rate: 16000,
+            channels: 1,
+            buffer_duration_ms: 5000, // 5 seconds
+        };
+        let result = AudioCapture::new(config);
+        // Just check it doesn't panic
+        let _ = result;
+    }
+
+    // =========================================================================
+    // AudioCapture Lifecycle Tests (conditional on device availability)
+    // =========================================================================
+
+    #[test]
+    fn test_audio_capture_lifecycle() {
+        // Skip if no audio device
+        let capture = match AudioCapture::new(AudioConfig::default()) {
+            Ok(c) => c,
+            Err(_) => return, // No device, skip test
+        };
+
+        // Verify initial state
+        assert!(!capture.is_recording());
+        assert!(!capture.has_error());
+
+        // Start recording
+        let start_result = capture.start();
+        if start_result.is_err() {
+            return; // Device may have issues, skip
+        }
+
+        // Give some time for recording to start
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        // Should be recording now (unless device failed)
+        // Note: may not be recording if device had issues
+
+        // Stop recording
+        let stop_result = capture.stop();
+        assert!(stop_result.is_ok());
+
+        // Should not be recording after stop
+        assert!(!capture.is_recording());
+    }
+
+    #[test]
+    fn test_audio_capture_start_stop_multiple_times() {
+        let capture = match AudioCapture::new(AudioConfig::default()) {
+            Ok(c) => c,
+            Err(_) => return, // No device, skip test
+        };
+
+        for _ in 0..3 {
+            let _ = capture.start();
+            std::thread::sleep(std::time::Duration::from_millis(50));
+            let _ = capture.stop();
+        }
+
+        // Should still be functional after multiple cycles
+        assert!(!capture.is_recording());
+    }
+
+    #[test]
+    fn test_audio_capture_clear() {
+        let capture = match AudioCapture::new(AudioConfig::default()) {
+            Ok(c) => c,
+            Err(_) => return, // No device, skip test
+        };
+
+        // Clear should not panic even without recording
+        capture.clear();
+
+        // Start, record briefly, clear, stop
+        let _ = capture.start();
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        capture.clear();
+        let (samples, _) = capture.stop().unwrap();
+
+        // After clear, there should be minimal samples (only from after clear)
+        // Note: exact count depends on timing
+        let _ = samples;
+    }
+
+    #[test]
+    fn test_audio_capture_config_accessor() {
+        let custom_config = AudioConfig {
+            sample_rate: 44100,
+            channels: 2,
+            buffer_duration_ms: 500,
+        };
+
+        let capture = match AudioCapture::new(custom_config.clone()) {
+            Ok(c) => c,
+            Err(_) => return, // No device, skip test
+        };
+
+        let config = capture.config();
+        assert_eq!(config.sample_rate, custom_config.sample_rate);
+        assert_eq!(config.channels, custom_config.channels);
+    }
+
+    #[test]
+    fn test_audio_capture_device_sample_rate() {
+        let capture = match AudioCapture::new(AudioConfig::default()) {
+            Ok(c) => c,
+            Err(_) => return, // No device, skip test
+        };
+
+        let device_rate = capture.device_sample_rate();
+        // Common sample rates are 44100, 48000, 16000, etc.
+        assert!(device_rate > 0);
+        assert!(device_rate <= 192000); // Max typical sample rate
+    }
+
+    // =========================================================================
+    // Error State Tests
+    // =========================================================================
+
+    #[test]
+    fn test_error_state_initial() {
+        let capture = match AudioCapture::new(AudioConfig::default()) {
+            Ok(c) => c,
+            Err(_) => return, // No device, skip test
+        };
+
+        assert!(!capture.has_error());
+        assert!(capture.get_error().is_none());
+    }
+
+    #[test]
+    fn test_clear_error() {
+        let capture = match AudioCapture::new(AudioConfig::default()) {
+            Ok(c) => c,
+            Err(_) => return, // No device, skip test
+        };
+
+        // Clear error should not panic even if no error
+        capture.clear_error();
+        assert!(!capture.has_error());
+    }
+
+    // =========================================================================
+    // Drop/Cleanup Tests
+    // =========================================================================
+
+    #[test]
+    fn test_audio_capture_drop_while_recording() {
+        let capture = match AudioCapture::new(AudioConfig::default()) {
+            Ok(c) => c,
+            Err(_) => return, // No device, skip test
+        };
+
+        let _ = capture.start();
+        std::thread::sleep(std::time::Duration::from_millis(50));
+
+        // Drop while recording - should not panic or hang
+        drop(capture);
+        // If we reach here, cleanup was successful
+    }
+
+    #[test]
+    fn test_audio_capture_drop_after_stop() {
+        let capture = match AudioCapture::new(AudioConfig::default()) {
+            Ok(c) => c,
+            Err(_) => return, // No device, skip test
+        };
+
+        let _ = capture.start();
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        let _ = capture.stop();
+
+        // Drop after stop - should not panic
+        drop(capture);
     }
 }

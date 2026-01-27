@@ -76,56 +76,58 @@ export function PopupOverlay({ onClose }: PopupOverlayProps) {
   return (
     <div
       className={clsx(
-        'fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-300',
+        'fixed inset-0 flex items-center justify-center z-50',
         visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       )}
+      style={{ transition: 'opacity 200ms ease' }}
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+        className="modal-backdrop"
         onClick={handleClose}
       />
 
       {/* Popup */}
       <div
         className={clsx(
-          'relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full mx-4 transform transition-all duration-300',
-          visible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
+          'modal-content relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full mx-4',
+          visible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-2'
         )}
+        style={{ transition: 'transform 200ms ease, opacity 200ms ease' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/80 dark:border-gray-700/80">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Transcription Result
           </h3>
           <button
             onClick={handleClose}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors duration-150"
           >
             <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4">
-          <p className="text-gray-900 dark:text-gray-100 text-base leading-relaxed select-all">
+        <div className="p-4 max-h-64 overflow-y-auto">
+          <p className="text-gray-900 dark:text-gray-100 text-sm leading-relaxed select-all">
             {text}
           </p>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-xl">
-          <span className="text-xs text-gray-500">
-            Press Ctrl+C to copy, Esc to close
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200/80 dark:border-gray-700/80 bg-gray-50 dark:bg-gray-900/50 rounded-b-xl">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            Ctrl+C to copy, Esc to close
           </span>
 
           <button
             onClick={handleCopy}
             className={clsx(
-              'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150',
               copied
-                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400'
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
             )}
           >
             {copied ? (

@@ -143,3 +143,131 @@ pub async fn clear_groq_api_key(state: State<'_, AppState>) -> Result<(), String
 pub fn validate_groq_api_key(api_key: String) -> Result<(), String> {
     SecretsManager::validate_groq_api_key(&api_key).map_err(|e| e.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // =========================================================================
+    // AudioDeviceDto Tests
+    // =========================================================================
+
+    #[test]
+    fn test_audio_device_dto_serialization() {
+        let device = AudioDeviceDto {
+            id: "device-1".to_string(),
+            name: "Test Microphone".to_string(),
+            is_default: true,
+        };
+
+        let json = serde_json::to_string(&device).expect("Failed to serialize");
+        assert!(json.contains("device-1"));
+        assert!(json.contains("Test Microphone"));
+        assert!(json.contains("true"));
+    }
+
+    #[test]
+    fn test_audio_device_dto_fields() {
+        let device = AudioDeviceDto {
+            id: "id123".to_string(),
+            name: "My Mic".to_string(),
+            is_default: false,
+        };
+
+        assert_eq!(device.id, "id123");
+        assert_eq!(device.name, "My Mic");
+        assert!(!device.is_default);
+    }
+
+    // =========================================================================
+    // get_audio_devices Tests
+    // =========================================================================
+
+    #[test]
+    fn test_get_audio_devices_returns_ok() {
+        // Should always return Ok (with at least default device fallback)
+        let result = get_audio_devices();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_audio_devices_has_devices() {
+        let result = get_audio_devices();
+        let devices = result.expect("Should return Ok");
+
+        // Should have at least one device (default fallback)
+        assert!(!devices.is_empty());
+    }
+
+    #[test]
+    fn test_get_audio_devices_has_default() {
+        let result = get_audio_devices();
+        let devices = result.expect("Should return Ok");
+
+        // At least one device should be marked as default
+        let has_default = devices.iter().any(|d| d.is_default);
+        assert!(has_default, "Should have at least one default device");
+    }
+
+    // =========================================================================
+    // validate_groq_api_key Tests
+    // =========================================================================
+
+    #[test]
+    fn test_validate_groq_api_key_valid() {
+        let valid_key = "gsk_abcdefghijklmnopqrstuvwxyz123456789012345678901234".to_string();
+        let result = validate_groq_api_key(valid_key);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_groq_api_key_empty() {
+        let result = validate_groq_api_key("".to_string());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_groq_api_key_wrong_prefix() {
+        let result = validate_groq_api_key("sk_test_1234567890".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("gsk_"));
+    }
+
+    #[test]
+    fn test_validate_groq_api_key_too_short() {
+        let result = validate_groq_api_key("gsk_short".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("short"));
+    }
+
+    #[test]
+    fn test_validate_groq_api_key_too_long() {
+        let long_key = format!("gsk_{}", "a".repeat(200));
+        let result = validate_groq_api_key(long_key);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("long"));
+    }
+
+    #[test]
+    fn test_validate_groq_api_key_invalid_chars() {
+        let result = validate_groq_api_key("gsk_test!@#$%^&*()_invalid".to_string());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_groq_api_key_whitespace() {
+        let result = validate_groq_api_key("   ".to_string());
+        assert!(result.is_err());
+    }
+
+    // =========================================================================
+    // has_groq_api_key Tests
+    // =========================================================================
+
+    #[test]
+    fn test_has_groq_api_key_returns_bool() {
+        // Should return a boolean without panicking
+        let result = has_groq_api_key();
+        let _: bool = result;
+    }
+}

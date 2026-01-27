@@ -78,40 +78,40 @@ export function UpdateNotification() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-slide-up">
+      <div className="card overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-blue-50 dark:bg-blue-900/30 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 bg-blue-50 dark:bg-blue-500/10 border-b border-gray-200/80 dark:border-gray-700/80">
           <div className="flex items-center gap-2">
             {state === 'ready' ? (
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <CheckCircle className="w-5 h-5 text-green-500" />
             ) : (
-              <Download className="w-5 h-5 text-blue-600" />
+              <Download className="w-5 h-5 text-blue-500" />
             )}
-            <span className="font-medium text-sm">
+            <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
               {state === 'ready' ? 'Update Ready' : 'Update Available'}
             </span>
           </div>
           {state !== 'downloading' && (
             <button
               onClick={handleDismiss}
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+              className="p-1.5 hover:bg-gray-200/70 dark:hover:bg-gray-700/50 rounded-lg transition-colors duration-150"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 text-gray-500" />
             </button>
           )}
         </div>
 
         {/* Content */}
         <div className="px-4 py-3">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
             {state === 'ready' ? (
               'The update has been downloaded. Restart to apply.'
             ) : (
               <>
-                Version <span className="font-mono font-medium">{updateInfo.newVersion}</span> is available.
+                Version <span className="font-mono font-medium text-gray-900 dark:text-gray-100">{updateInfo.newVersion}</span> is available.
                 <br />
-                <span className="text-gray-500">Current: {updateInfo.currentVersion}</span>
+                <span className="text-gray-500 dark:text-gray-500">Current: {updateInfo.currentVersion}</span>
               </>
             )}
           </p>
@@ -119,19 +119,19 @@ export function UpdateNotification() {
           {/* Progress bar */}
           {state === 'downloading' && (
             <div className="mb-3">
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div className="progress-bar">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="progress-bar-fill"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Downloading... {progress}%</p>
+              <p className="text-xs text-gray-500 mt-1.5">Downloading... {progress}%</p>
             </div>
           )}
 
           {/* Error message */}
           {error && (
-            <p className="text-sm text-red-600 dark:text-red-400 mb-2">{error}</p>
+            <p className="text-sm text-red-500 mb-3">{error}</p>
           )}
 
           {/* Actions */}
@@ -140,14 +140,14 @@ export function UpdateNotification() {
               <>
                 <button
                   onClick={handleInstall}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium transition-colors duration-150"
                 >
                   <Download className="w-4 h-4" />
                   Update Now
                 </button>
                 <button
                   onClick={handleDismiss}
-                  className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-sm"
+                  className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg text-sm transition-colors duration-150"
                 >
                   Later
                 </button>
@@ -164,7 +164,7 @@ export function UpdateNotification() {
             {state === 'ready' && (
               <button
                 onClick={handleRestart}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm font-medium transition-colors duration-150"
               >
                 <RefreshCw className="w-4 h-4" />
                 Restart Now

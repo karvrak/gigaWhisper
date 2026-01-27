@@ -417,3 +417,271 @@ impl Default for TranscriptionService {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ============================================================
+    // TranscriptionStatus Tests
+    // ============================================================
+
+    #[test]
+    fn test_transcription_status_default() {
+        let status = TranscriptionStatus::default();
+
+        assert_eq!(status.provider, "local");
+        assert_eq!(status.model, "base");
+        assert!(!status.model_loaded);
+        assert!(!status.is_transcribing);
+        assert!(status.last_result.is_none());
+        assert!(status.last_duration_ms.is_none());
+        assert!(status.last_error.is_none());
+    }
+
+    #[test]
+    fn test_transcription_status_clone() {
+        let mut status = TranscriptionStatus::default();
+        status.provider = "groq".to_string();
+        status.model = "whisper-large-v3".to_string();
+        status.model_loaded = true;
+        status.is_transcribing = true;
+        status.last_result = Some("Hello world".to_string());
+        status.last_duration_ms = Some(1500);
+        status.last_error = None;
+
+        let cloned = status.clone();
+
+        assert_eq!(cloned.provider, "groq");
+        assert_eq!(cloned.model, "whisper-large-v3");
+        assert!(cloned.model_loaded);
+        assert!(cloned.is_transcribing);
+        assert_eq!(cloned.last_result, Some("Hello world".to_string()));
+        assert_eq!(cloned.last_duration_ms, Some(1500));
+        assert!(cloned.last_error.is_none());
+    }
+
+    #[test]
+    fn test_transcription_status_serialization() {
+        let status = TranscriptionStatus::default();
+        let json = serde_json::to_string(&status).unwrap();
+
+        assert!(json.contains("provider"));
+        assert!(json.contains("model"));
+        assert!(json.contains("model_loaded"));
+        assert!(json.contains("is_transcribing"));
+    }
+
+    #[test]
+    fn test_transcription_status_with_error() {
+        let mut status = TranscriptionStatus::default();
+        status.last_error = Some("Model not found".to_string());
+
+        assert_eq!(status.last_error, Some("Model not found".to_string()));
+    }
+
+    // ============================================================
+    // TranscriptionService Creation Tests
+    // ============================================================
+
+    #[test]
+    fn test_service_creation() {
+        let service = TranscriptionService::new();
+        let status = service.get_status();
+
+        assert_eq!(status.provider, "local");
+        assert_eq!(status.model, "base");
+        assert!(!status.model_loaded);
+        assert!(!status.is_transcribing);
+    }
+
+    #[test]
+    fn test_service_default() {
+        let service = TranscriptionService::default();
+        let status = service.get_status();
+
+        assert_eq!(status.provider, "local");
+        assert!(!status.model_loaded);
+    }
+
+    // ============================================================
+    // Status Management Tests
+    // ============================================================
+
+    #[test]
+    fn test_get_status_returns_clone() {
+        let service = TranscriptionService::new();
+
+        let status1 = service.get_status();
+        let status2 = service.get_status();
+
+        // Both should be independent clones
+        assert_eq!(status1.provider, status2.provider);
+        assert_eq!(status1.model_loaded, status2.model_loaded);
+    }
+
+    #[test]
+    fn test_unload_model_updates_status() {
+        let service = TranscriptionService::new();
+
+        // Initially not loaded
+        assert!(!service.get_status().model_loaded);
+
+        // Unload (should not panic even if not loaded)
+        service.unload_model();
+
+        // Should still report not loaded
+        assert!(!service.get_status().model_loaded);
+    }
+
+    // ============================================================
+    // Model Management Tests
+    // ============================================================
+
+    #[test]
+    fn test_unload_model_when_not_loaded() {
+        let service = TranscriptionService::new();
+
+        // Should not panic
+        service.unload_model();
+        service.unload_model();
+        service.unload_model();
+
+        assert!(!service.get_status().model_loaded);
+    }
+
+    // ============================================================
+    // Thread Safety Tests
+    // ============================================================
+
+    #[test]
+    fn test_service_is_send_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<TranscriptionService>();
+    }
+
+    #[test]
+    fn test_status_can_be_shared_across_threads() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let service = Arc::new(TranscriptionService::new());
+        let service_clone = Arc::clone(&service);
+
+        let handle = thread::spawn(move || {
+            let status = service_clone.get_status();
+            assert_eq!(status.provider, "local");
+        });
+
+        let status = service.get_status();
+        assert_eq!(status.provider, "local");
+
+        handle.join().unwrap();
+    }
+
+    #[test]
+    fn test_concurrent_status_reads() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let service = Arc::new(TranscriptionService::new());
+        let mut handles = vec![];
+
+        for _ in 0..10 {
+            let service_clone = Arc::clone(&service);
+            handles.push(thread::spawn(move || {
+                for _ in 0..100 {
+                    let _status = service_clone.get_status();
+                }
+            }));
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+
+    // ============================================================
+    // Edge Cases
+    // ============================================================
+
+    #[test]
+    fn test_status_with_empty_strings() {
+        let mut status = TranscriptionStatus::default();
+        status.provider = "".to_string();
+        status.model = "".to_string();
+        status.last_result = Some("".to_string());
+        status.last_error = Some("".to_string());
+
+        assert_eq!(status.provider, "");
+        assert_eq!(status.model, "");
+        assert_eq!(status.last_result, Some("".to_string()));
+        assert_eq!(status.last_error, Some("".to_string()));
+    }
+
+    #[test]
+    fn test_status_with_unicode() {
+        let mut status = TranscriptionStatus::default();
+        status.provider = "local".to_string();
+        status.last_result = Some("Bonjour le monde".to_string());
+
+        let json = serde_json::to_string(&status).unwrap();
+        assert!(json.contains("Bonjour"));
+    }
+
+    #[test]
+    fn test_status_with_long_text() {
+        let mut status = TranscriptionStatus::default();
+        let long_text = "a".repeat(10000);
+        status.last_result = Some(long_text.clone());
+
+        assert_eq!(status.last_result.as_ref().unwrap().len(), 10000);
+    }
+
+    #[test]
+    fn test_status_debug_format() {
+        let status = TranscriptionStatus::default();
+        let debug_str = format!("{:?}", status);
+
+        assert!(debug_str.contains("TranscriptionStatus"));
+        assert!(debug_str.contains("provider"));
+        assert!(debug_str.contains("model"));
+    }
+
+    // ============================================================
+    // Serialization Tests
+    // ============================================================
+
+    #[test]
+    fn test_status_json_roundtrip() {
+        let mut status = TranscriptionStatus::default();
+        status.provider = "groq".to_string();
+        status.model = "whisper-large-v3".to_string();
+        status.model_loaded = true;
+        status.is_transcribing = false;
+        status.last_result = Some("Test result".to_string());
+        status.last_duration_ms = Some(2500);
+        status.last_error = None;
+
+        let json = serde_json::to_string(&status).unwrap();
+
+        // Verify all fields are present
+        assert!(json.contains("\"provider\":\"groq\""));
+        assert!(json.contains("\"model\":\"whisper-large-v3\""));
+        assert!(json.contains("\"model_loaded\":true"));
+        assert!(json.contains("\"is_transcribing\":false"));
+        assert!(json.contains("\"last_result\":\"Test result\""));
+        assert!(json.contains("\"last_duration_ms\":2500"));
+        assert!(json.contains("\"last_error\":null"));
+    }
+
+    #[test]
+    fn test_status_json_with_nulls() {
+        let status = TranscriptionStatus::default();
+        let json = serde_json::to_string(&status).unwrap();
+
+        assert!(json.contains("\"last_result\":null"));
+        assert!(json.contains("\"last_duration_ms\":null"));
+        assert!(json.contains("\"last_error\":null"));
+    }
+}

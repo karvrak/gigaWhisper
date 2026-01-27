@@ -177,19 +177,32 @@ jobs:
           $variant = "${{ matrix.variant }}"
           $releaseDir = "src-tauri/target/release/bundle/nsis"
 
-          # Find and rename NSIS installer
-          $nsisFile = Get-ChildItem -Path $releaseDir -Filter "*.exe" | Where-Object { $_.Name -notmatch "cpu|vulkan|cuda" } | Select-Object -First 1
+          Write-Host "Looking for NSIS installer in: $releaseDir"
+          Write-Host "All files in directory:"
+          Get-ChildItem -Path $releaseDir -Recurse | ForEach-Object { Write-Host "  $($_.FullName)" }
+
+          # Find NSIS installer (exclude already renamed files)
+          $nsisFile = Get-ChildItem -Path $releaseDir -Filter "*.exe" | Where-Object { $_.Name -notmatch "-cpu-|-vulkan-|-cuda-" } | Select-Object -First 1
+
           if ($nsisFile) {
             $newName = "GigaWhisper_${version}_x64-${variant}-setup.exe"
             $newPath = Join-Path $releaseDir $newName
+            Write-Host "Found: $($nsisFile.Name)"
+            Write-Host "Renaming to: $newName"
             Move-Item $nsisFile.FullName $newPath -Force
-            Write-Host "Renamed $($nsisFile.Name) to $newName"
+            Write-Host "Renamed successfully"
 
             # Also rename the signature file
             $sigFile = "$($nsisFile.FullName).sig"
             if (Test-Path $sigFile) {
               Move-Item $sigFile "$newPath.sig" -Force
+              Write-Host "Renamed signature file"
             }
+          } else {
+            Write-Host "ERROR: No NSIS installer found!"
+            Write-Host "Available .exe files:"
+            Get-ChildItem -Path $releaseDir -Filter "*.exe" | ForEach-Object { Write-Host "  $($_.Name)" }
+            exit 1
           }
 
       # Upload renamed artifacts to release
@@ -200,21 +213,32 @@ jobs:
         run: |
           $version = "${{ needs.create-release.outputs.version }}"
           $variant = "${{ matrix.variant }}"
-          $releaseId = "${{ needs.create-release.outputs.release_id }}"
           $releaseDir = "src-tauri/target/release/bundle/nsis"
+
+          Write-Host "Uploading artifacts for variant: $variant"
 
           # Upload NSIS installer
           $exeFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.exe"
+          Write-Host "Looking for: $exeFile"
+
           if (Test-Path $exeFile) {
+            Write-Host "File found, uploading..."
             gh release upload "v${version}" $exeFile --clobber
             Write-Host "Uploaded $exeFile"
+          } else {
+            Write-Host "ERROR: File not found: $exeFile"
+            Write-Host "Available files in $releaseDir :"
+            Get-ChildItem -Path $releaseDir | ForEach-Object { Write-Host "  $($_.Name)" }
+            exit 1
           }
 
           # Upload signature
           $sigFile = "$exeFile.sig"
           if (Test-Path $sigFile) {
             gh release upload "v${version}" $sigFile --clobber
-            Write-Host "Uploaded $sigFile"
+            Write-Host "Uploaded signature: $sigFile"
+          } else {
+            Write-Host "Warning: Signature file not found: $sigFile"
           }
 
       # Generate latest-{variant}.json

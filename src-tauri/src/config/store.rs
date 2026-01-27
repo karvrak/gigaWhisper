@@ -31,6 +31,9 @@ pub fn models_dir() -> PathBuf {
 }
 
 /// Load settings from disk
+///
+/// Settings are automatically sanitized to ensure values are within valid ranges.
+/// This prevents issues from manually edited configuration files.
 pub fn load_settings() -> Result<Settings, SettingsError> {
     let path = config_file();
 
@@ -42,8 +45,23 @@ pub fn load_settings() -> Result<Settings, SettingsError> {
     let content = std::fs::read_to_string(&path)?;
     let settings: Settings = toml::from_str(&content)?;
 
+    // Sanitize settings to ensure values are within valid ranges
+    // This prevents crashes or unexpected behavior from manually edited config files
+    let sanitized = settings.sanitize();
+
+    // Log if any values were sanitized
+    if settings.recording.max_duration != sanitized.recording.max_duration
+        || settings.recording.silence_timeout != sanitized.recording.silence_timeout
+        || settings.transcription.local.threads != sanitized.transcription.local.threads
+        || settings.transcription.groq.timeout_seconds != sanitized.transcription.groq.timeout_seconds
+        || settings.audio.vad.aggressiveness != sanitized.audio.vad.aggressiveness
+        || settings.output.paste_delay != sanitized.output.paste_delay
+    {
+        tracing::warn!("Some settings values were out of range and have been sanitized");
+    }
+
     tracing::info!("Settings loaded from {:?}", path);
-    Ok(settings)
+    Ok(sanitized)
 }
 
 /// Save settings to disk

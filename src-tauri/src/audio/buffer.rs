@@ -2,6 +2,9 @@
 //!
 //! Efficient circular buffer for audio samples.
 
+/// Minimum buffer capacity (1 second at 16kHz)
+const MIN_CAPACITY: usize = 16000;
+
 /// Ring buffer for audio samples
 pub struct RingBuffer {
     data: Vec<f32>,
@@ -12,9 +15,35 @@ pub struct RingBuffer {
 
 impl RingBuffer {
     /// Create a new ring buffer with given capacity
+    ///
+    /// # Panics
+    /// Panics if capacity is 0. Use `try_new` for a non-panicking alternative.
     pub fn new(capacity: usize) -> Self {
-        Self {
+        Self::try_new(capacity).expect("RingBuffer capacity must be greater than 0")
+    }
+
+    /// Try to create a new ring buffer with given capacity
+    ///
+    /// Returns None if capacity is 0.
+    pub fn try_new(capacity: usize) -> Option<Self> {
+        if capacity == 0 {
+            return None;
+        }
+        Some(Self {
             data: vec![0.0; capacity],
+            write_pos: 0,
+            read_pos: 0,
+            count: 0,
+        })
+    }
+
+    /// Create a new ring buffer with given capacity, ensuring minimum size
+    ///
+    /// Capacity is clamped to at least MIN_CAPACITY (16000 samples = 1 second at 16kHz)
+    pub fn with_min_capacity(capacity: usize) -> Self {
+        let actual_capacity = capacity.max(MIN_CAPACITY);
+        Self {
+            data: vec![0.0; actual_capacity],
             write_pos: 0,
             read_pos: 0,
             count: 0,
@@ -118,5 +147,35 @@ mod tests {
 
         assert_eq!(samples, vec![1.0, 2.0, 3.0]);
         assert!(buffer.is_empty());
+    }
+
+    #[test]
+    fn test_try_new_zero_capacity() {
+        let buffer = RingBuffer::try_new(0);
+        assert!(buffer.is_none());
+    }
+
+    #[test]
+    fn test_try_new_valid_capacity() {
+        let buffer = RingBuffer::try_new(10);
+        assert!(buffer.is_some());
+        assert_eq!(buffer.unwrap().capacity(), 10);
+    }
+
+    #[test]
+    #[should_panic(expected = "RingBuffer capacity must be greater than 0")]
+    fn test_new_zero_capacity_panics() {
+        let _buffer = RingBuffer::new(0);
+    }
+
+    #[test]
+    fn test_with_min_capacity() {
+        // Small capacity should be clamped to MIN_CAPACITY
+        let buffer = RingBuffer::with_min_capacity(100);
+        assert_eq!(buffer.capacity(), MIN_CAPACITY);
+
+        // Large capacity should be preserved
+        let buffer = RingBuffer::with_min_capacity(50000);
+        assert_eq!(buffer.capacity(), 50000);
     }
 }
