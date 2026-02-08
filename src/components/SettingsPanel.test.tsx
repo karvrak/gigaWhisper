@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SettingsPanel } from './SettingsPanel';
 
@@ -298,8 +298,7 @@ describe('SettingsPanel', () => {
       await user.click(screen.getByText('Transcription'));
 
       // Find the language select by its label association
-      const languageLabel = screen.getByText('Language');
-      const languageSection = languageLabel.closest('div');
+      screen.getByText('Language');
       const selects = screen.getAllByRole('combobox');
       // The language select should be in the transcription section and have language options
       const languageSelect = selects.find(

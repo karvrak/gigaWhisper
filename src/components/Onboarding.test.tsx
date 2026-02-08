@@ -70,10 +70,10 @@ describe('Onboarding', () => {
       return Promise.resolve(undefined);
     });
 
-    vi.mocked(listen).mockImplementation((eventName: string, callback: (event: { payload: unknown }) => void) => {
+    vi.mocked(listen).mockImplementation(((eventName: string, callback: (event: { payload: unknown }) => void) => {
       mockListenCallbacks.set(eventName, callback);
       return Promise.resolve(() => {});
-    });
+    }) as typeof listen);
 
     // Mock matchMedia for theme detection
     Object.defineProperty(window, 'matchMedia', {
