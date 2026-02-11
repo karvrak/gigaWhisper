@@ -51,7 +51,8 @@ const mockSettings = {
 
 describe('Onboarding', () => {
   const mockOnComplete = vi.fn();
-  let mockListenCallbacks: Map<string, (event: { payload: unknown }) => void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockListenCallbacks: Map<string, (event: any) => void>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -70,7 +71,8 @@ describe('Onboarding', () => {
       return Promise.resolve(undefined);
     });
 
-    vi.mocked(listen).mockImplementation((eventName: string, callback: (event: { payload: unknown }) => void) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(listen).mockImplementation((eventName: string, callback: any) => {
       mockListenCallbacks.set(eventName, callback);
       return Promise.resolve(() => {});
     });
