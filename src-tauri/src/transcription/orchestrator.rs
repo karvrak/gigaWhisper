@@ -49,7 +49,7 @@ impl TranscriptionOrchestrator {
                     result.provider,
                     result.duration_ms
                 );
-                return Ok(result);
+                Ok(result)
             }
             Err(e) => {
                 tracing::warn!("Primary provider {} failed: {}", self.primary.name(), e);
@@ -63,7 +63,7 @@ impl TranscriptionOrchestrator {
                 }
 
                 // No fallback available, propagate error
-                return Err(e);
+                Err(e)
             }
         }
     }

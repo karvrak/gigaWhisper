@@ -20,7 +20,7 @@ pub fn register_shortcuts(app: &tauri::App) -> Result<(), Box<dyn std::error::Er
 
     // Register the shortcut
     app.global_shortcut()
-        .on_shortcut(record_shortcut.clone(), move |app, shortcut, event| {
+        .on_shortcut(record_shortcut, move |app, shortcut, event| {
             handle_record_shortcut(app, shortcut, event.state);
         })
         .map_err(|e| {

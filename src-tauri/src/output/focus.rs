@@ -26,7 +26,7 @@ pub fn get_active_window() -> Option<ActiveWindow> {
     // - No memory is allocated that requires manual deallocation
     unsafe {
         let hwnd = GetForegroundWindow();
-        if hwnd.0 == std::ptr::null_mut() {
+        if hwnd.0.is_null() {
             return None;
         }
 
@@ -100,7 +100,7 @@ fn check_text_input(_hwnd: windows::Win32::Foundation::HWND) -> bool {
     // - Buffer size is sufficient for any Windows class name
     unsafe {
         let focus = GetFocus();
-        if focus.0 == std::ptr::null_mut() {
+        if focus.0.is_null() {
             return false;
         }
 

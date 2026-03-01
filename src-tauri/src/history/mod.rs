@@ -57,7 +57,7 @@ impl TranscriptionHistory {
                     match serde_json::from_str(&content) {
                         Ok(history) => {
                             tracing::info!("Loaded {} history entries",
-                                match &history { TranscriptionHistory { entries } => entries.len() });
+                            { let TranscriptionHistory { entries } = &history; entries.len() });
                             return history;
                         }
                         Err(e) => {
@@ -83,7 +83,7 @@ impl TranscriptionHistory {
         }
 
         let content = serde_json::to_string_pretty(self)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .map_err(std::io::Error::other)?;
 
         std::fs::write(&path, content)?;
         tracing::debug!("History saved to {:?}", path);
@@ -168,17 +168,17 @@ pub fn save_audio_file(samples: &[f32], sample_rate: u32, id: &str) -> Result<Pa
     };
 
     let mut writer = hound::WavWriter::create(&file_path, spec)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        .map_err(std::io::Error::other)?;
 
     for &sample in samples {
         // Convert f32 [-1.0, 1.0] to i16
         let sample_i16 = (sample * 32767.0).clamp(-32768.0, 32767.0) as i16;
         writer.write_sample(sample_i16)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .map_err(std::io::Error::other)?;
     }
 
     writer.finalize()
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        .map_err(std::io::Error::other)?;
 
     tracing::debug!("Audio saved to {:?}", file_path);
     Ok(file_path)

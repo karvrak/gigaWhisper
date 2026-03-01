@@ -211,10 +211,10 @@ impl VoiceActivityDetector {
         for i in 0..frames_to_check {
             let start = i * frame_samples;
             let end = start + frame_samples;
-            if end <= audio_i16.len() {
-                if vad.is_voice_segment(&audio_i16[start..end]).unwrap_or(false) {
-                    speech_count += 1;
-                }
+            if end <= audio_i16.len()
+                && vad.is_voice_segment(&audio_i16[start..end]).unwrap_or(false)
+            {
+                speech_count += 1;
             }
         }
 
@@ -259,8 +259,8 @@ fn filter_short_segments(frames: &[bool], min_frames: usize) -> Vec<bool> {
                 let segment_len = i - start;
                 if segment_len < min_frames {
                     // Mark short segment as non-speech
-                    for j in start..i {
-                        result[j] = false;
+                    for item in result.iter_mut().take(i).skip(start) {
+                        *item = false;
                     }
                 }
                 segment_start = None;

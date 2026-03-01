@@ -29,7 +29,7 @@ pub enum MigrationError {
 /// Represents a single migration step
 pub trait Migration: Send + Sync {
     /// Source version this migration applies to
-    fn from_version(&self) -> u32;
+    fn source_version(&self) -> u32;
 
     /// Target version after migration
     fn to_version(&self) -> u32;
@@ -49,15 +49,12 @@ pub struct MigrationRegistry {
 impl MigrationRegistry {
     /// Create a new registry with all known migrations
     pub fn new() -> Self {
-        let registry = Self {
+        Self {
             migrations: vec![
                 // Register migrations here as they are created
                 // Example: Box::new(MigrationV1ToV2),
             ],
-        };
-
-        // Sort migrations by version order
-        registry
+        }
     }
 
     /// Get the current schema version from a TOML config
@@ -89,7 +86,7 @@ impl MigrationRegistry {
 
         // Apply migrations in order
         for migration in &self.migrations {
-            let from = migration.from_version();
+            let from = migration.source_version();
             let to = migration.to_version();
 
             // Only apply migrations that are in our version range

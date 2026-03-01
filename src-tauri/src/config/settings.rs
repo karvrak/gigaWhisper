@@ -499,7 +499,7 @@ impl GroqSettings {
 }
 
 /// Audio input settings
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AudioSettings {
     /// Input device ID (None = default)
@@ -508,14 +508,6 @@ pub struct AudioSettings {
     pub vad: VadSettings,
 }
 
-impl Default for AudioSettings {
-    fn default() -> Self {
-        Self {
-            input_device: None,
-            vad: VadSettings::default(),
-        }
-    }
-}
 
 impl AudioSettings {
     /// Validate audio settings
