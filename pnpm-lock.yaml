@@ -45,6 +45,9 @@ importers:
       '@tauri-apps/cli':
         specifier: ^2.0.0
         version: 2.9.6
+      '@testing-library/dom':
+        specifier: ^10.4.1
+        version: 10.4.1
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
