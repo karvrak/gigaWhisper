@@ -137,11 +137,11 @@ pub fn get_audio_data(id: String) -> Result<String, String> {
         .ok_or_else(|| "No audio file for this entry".to_string())?;
 
     // Validate the path is within the audio directory (prevent path traversal)
-    let validated_path = validate_audio_path(audio_path)
-        .ok_or_else(|| "Invalid audio file path".to_string())?;
+    let validated_path =
+        validate_audio_path(audio_path).ok_or_else(|| "Invalid audio file path".to_string())?;
 
-    let audio_bytes = std::fs::read(&validated_path)
-        .map_err(|e| format!("Failed to read audio file: {}", e))?;
+    let audio_bytes =
+        std::fs::read(&validated_path).map_err(|e| format!("Failed to read audio file: {}", e))?;
 
     let base64_data = STANDARD.encode(&audio_bytes);
 

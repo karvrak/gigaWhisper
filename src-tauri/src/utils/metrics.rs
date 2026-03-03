@@ -74,8 +74,16 @@ impl PerformanceMetrics {
             return MetricsSummary::default();
         }
 
-        let total_processing: u64 = self.transcriptions.iter().map(|r| r.processing_time_ms).sum();
-        let total_audio: u64 = self.transcriptions.iter().map(|r| r.audio_duration_ms).sum();
+        let total_processing: u64 = self
+            .transcriptions
+            .iter()
+            .map(|r| r.processing_time_ms)
+            .sum();
+        let total_audio: u64 = self
+            .transcriptions
+            .iter()
+            .map(|r| r.audio_duration_ms)
+            .sum();
 
         let avg_processing_ms = total_processing / count as u64;
         let avg_audio_ms = total_audio / count as u64;
@@ -89,20 +97,41 @@ impl PerformanceMetrics {
         };
 
         // Find fastest and slowest
-        let fastest = self.transcriptions.iter().map(|r| r.processing_time_ms).min().unwrap_or(0);
-        let slowest = self.transcriptions.iter().map(|r| r.processing_time_ms).max().unwrap_or(0);
+        let fastest = self
+            .transcriptions
+            .iter()
+            .map(|r| r.processing_time_ms)
+            .min()
+            .unwrap_or(0);
+        let slowest = self
+            .transcriptions
+            .iter()
+            .map(|r| r.processing_time_ms)
+            .max()
+            .unwrap_or(0);
 
         // Calculate percentile (p95)
-        let mut times: Vec<u64> = self.transcriptions.iter().map(|r| r.processing_time_ms).collect();
+        let mut times: Vec<u64> = self
+            .transcriptions
+            .iter()
+            .map(|r| r.processing_time_ms)
+            .collect();
         times.sort();
         let p95_idx = (count as f64 * 0.95) as usize;
         let p95_ms = times.get(p95_idx.min(count - 1)).copied().unwrap_or(0);
 
         // VAD statistics
-        let vad_records: Vec<_> = self.transcriptions.iter().filter(|r| r.vad_enabled).collect();
+        let vad_records: Vec<_> = self
+            .transcriptions
+            .iter()
+            .filter(|r| r.vad_enabled)
+            .collect();
         let vad_savings_ms = if !vad_records.is_empty() {
             let total_original: u64 = vad_records.iter().map(|r| r.audio_duration_ms).sum();
-            let total_filtered: u64 = vad_records.iter().map(|r| r.vad_filtered_ms.unwrap_or(r.audio_duration_ms)).sum();
+            let total_filtered: u64 = vad_records
+                .iter()
+                .map(|r| r.vad_filtered_ms.unwrap_or(r.audio_duration_ms))
+                .sum();
             total_original.saturating_sub(total_filtered)
         } else {
             0

@@ -91,10 +91,7 @@ pub struct AudioDeviceDto {
 
 /// Set Groq API key (stored securely in Windows Credential Manager)
 #[tauri::command]
-pub async fn set_groq_api_key(
-    state: State<'_, AppState>,
-    api_key: String,
-) -> Result<(), String> {
+pub async fn set_groq_api_key(state: State<'_, AppState>, api_key: String) -> Result<(), String> {
     // Validate and store the API key securely
     SecretsManager::set_groq_api_key(&api_key).map_err(|e| e.to_string())?;
 

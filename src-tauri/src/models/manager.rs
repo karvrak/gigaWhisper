@@ -27,7 +27,10 @@ pub fn model_path(model: &WhisperModel) -> PathBuf {
 }
 
 /// Check if a model with specific quantization is downloaded
-pub fn is_model_downloaded_with_quantization(model: &WhisperModel, quant: &ModelQuantization) -> bool {
+pub fn is_model_downloaded_with_quantization(
+    model: &WhisperModel,
+    quant: &ModelQuantization,
+) -> bool {
     model_path_with_quantization(model, quant).exists()
 }
 
@@ -103,7 +106,10 @@ pub fn list_downloaded_models() -> Vec<ModelInfo> {
 }
 
 /// Delete a downloaded model with specific quantization
-pub fn delete_model_with_quantization(model: &WhisperModel, quant: &ModelQuantization) -> Result<(), std::io::Error> {
+pub fn delete_model_with_quantization(
+    model: &WhisperModel,
+    quant: &ModelQuantization,
+) -> Result<(), std::io::Error> {
     let path = model_path_with_quantization(model, quant);
     if path.exists() {
         std::fs::remove_file(&path)?;
@@ -249,7 +255,8 @@ mod tests {
     #[test]
     fn test_is_model_downloaded_with_quantization() {
         // Verify function works with different quantizations
-        let _ = is_model_downloaded_with_quantization(&WhisperModel::Tiny, &ModelQuantization::Q5_1);
+        let _ =
+            is_model_downloaded_with_quantization(&WhisperModel::Tiny, &ModelQuantization::Q5_1);
     }
 
     // =========================================================================
@@ -444,5 +451,8 @@ fn itertools_lite<'a>(
     b: &'a [ModelInfo],
     c: &'a [ModelInfo],
 ) -> impl Iterator<Item = (&'a ModelInfo, &'a ModelInfo, &'a ModelInfo)> {
-    a.iter().zip(b.iter()).zip(c.iter()).map(|((x, y), z)| (x, y, z))
+    a.iter()
+        .zip(b.iter())
+        .zip(c.iter())
+        .map(|((x, y), z)| (x, y, z))
 }

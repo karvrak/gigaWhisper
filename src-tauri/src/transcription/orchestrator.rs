@@ -85,7 +85,10 @@ impl TranscriptionOrchestrator {
 
     /// Check if fallback provider is available
     pub fn is_fallback_available(&self) -> bool {
-        self.fallback.as_ref().map(|p| p.is_available()).unwrap_or(false)
+        self.fallback
+            .as_ref()
+            .map(|p| p.is_available())
+            .unwrap_or(false)
     }
 }
 
@@ -161,9 +164,10 @@ mod tests {
             }
 
             if self.should_fail {
-                Err(self.fail_error.clone().unwrap_or_else(|| {
-                    TranscriptionError::Failed("Mock failure".to_string())
-                }))
+                Err(self
+                    .fail_error
+                    .clone()
+                    .unwrap_or_else(|| TranscriptionError::Failed("Mock failure".to_string())))
             } else {
                 Ok(TranscriptionResult {
                     text: "Hello world".to_string(),
@@ -202,9 +206,8 @@ mod tests {
     #[tokio::test]
     async fn test_selects_local_provider_when_configured() {
         // Simulates selecting local Whisper provider
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("whisper.cpp"))
-        );
+        let orchestrator =
+            TranscriptionOrchestrator::new(Box::new(MockProvider::new("whisper.cpp")));
 
         assert_eq!(orchestrator.primary_provider(), "whisper.cpp");
         assert!(orchestrator.is_primary_available());
@@ -213,9 +216,7 @@ mod tests {
     #[tokio::test]
     async fn test_selects_cloud_provider_when_configured() {
         // Simulates selecting Groq cloud provider
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("groq"))
-        );
+        let orchestrator = TranscriptionOrchestrator::new(Box::new(MockProvider::new("groq")));
 
         assert_eq!(orchestrator.primary_provider(), "groq");
         assert!(orchestrator.is_primary_available());
@@ -223,9 +224,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_provider_availability_check() {
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("primary").available(false))
-        );
+        let orchestrator =
+            TranscriptionOrchestrator::new(Box::new(MockProvider::new("primary").available(false)));
 
         assert!(!orchestrator.is_primary_available());
     }
@@ -251,25 +251,27 @@ mod tests {
 
     #[tokio::test]
     async fn test_model_not_loaded_error() {
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("primary").with_error(TranscriptionError::ModelNotLoaded))
-        );
+        let orchestrator = TranscriptionOrchestrator::new(Box::new(
+            MockProvider::new("primary").with_error(TranscriptionError::ModelNotLoaded),
+        ));
 
         let result = orchestrator
             .transcribe(&[0.0; 100], &TranscriptionConfig::default())
             .await;
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), TranscriptionError::ModelNotLoaded));
+        assert!(matches!(
+            result.unwrap_err(),
+            TranscriptionError::ModelNotLoaded
+        ));
     }
 
     #[tokio::test]
     async fn test_model_not_found_error() {
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("primary").with_error(
-                TranscriptionError::ModelNotFound("tiny.bin".to_string())
-            ))
-        );
+        let orchestrator = TranscriptionOrchestrator::new(Box::new(
+            MockProvider::new("primary")
+                .with_error(TranscriptionError::ModelNotFound("tiny.bin".to_string())),
+        ));
 
         let result = orchestrator
             .transcribe(&[0.0; 100], &TranscriptionConfig::default())
@@ -284,11 +286,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_api_error_propagation() {
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("groq").with_error(
-                TranscriptionError::ApiError("Invalid API key".to_string())
-            ))
-        );
+        let orchestrator = TranscriptionOrchestrator::new(Box::new(
+            MockProvider::new("groq")
+                .with_error(TranscriptionError::ApiError("Invalid API key".to_string())),
+        ));
 
         let result = orchestrator
             .transcribe(&[0.0; 100], &TranscriptionConfig::default())
@@ -303,32 +304,37 @@ mod tests {
 
     #[tokio::test]
     async fn test_network_error_propagation() {
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("groq").with_error(
-                TranscriptionError::NetworkError("Connection refused".to_string())
-            ))
-        );
+        let orchestrator =
+            TranscriptionOrchestrator::new(Box::new(MockProvider::new("groq").with_error(
+                TranscriptionError::NetworkError("Connection refused".to_string()),
+            )));
 
         let result = orchestrator
             .transcribe(&[0.0; 100], &TranscriptionConfig::default())
             .await;
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), TranscriptionError::NetworkError(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            TranscriptionError::NetworkError(_)
+        ));
     }
 
     #[tokio::test]
     async fn test_rate_limited_error() {
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("groq").with_error(TranscriptionError::RateLimited))
-        );
+        let orchestrator = TranscriptionOrchestrator::new(Box::new(
+            MockProvider::new("groq").with_error(TranscriptionError::RateLimited),
+        ));
 
         let result = orchestrator
             .transcribe(&[0.0; 100], &TranscriptionConfig::default())
             .await;
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), TranscriptionError::RateLimited));
+        assert!(matches!(
+            result.unwrap_err(),
+            TranscriptionError::RateLimited
+        ));
     }
 
     // ============================================================
@@ -411,9 +417,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_no_fallback_configured() {
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("primary"))
-        );
+        let orchestrator = TranscriptionOrchestrator::new(Box::new(MockProvider::new("primary")));
 
         assert!(orchestrator.fallback_provider().is_none());
         assert!(!orchestrator.is_fallback_available());
@@ -437,9 +441,11 @@ mod tests {
     #[tokio::test]
     async fn test_fallback_on_network_error() {
         let orchestrator = TranscriptionOrchestrator::with_fallback(
-            Box::new(MockProvider::new("groq").with_error(
-                TranscriptionError::NetworkError("DNS lookup failed".to_string())
-            )),
+            Box::new(
+                MockProvider::new("groq").with_error(TranscriptionError::NetworkError(
+                    "DNS lookup failed".to_string(),
+                )),
+            ),
             Box::new(MockProvider::new("whisper.cpp")),
         );
 
@@ -458,9 +464,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_timeout_error_type() {
-        let orchestrator = TranscriptionOrchestrator::new(
-            Box::new(MockProvider::new("primary").with_error(TranscriptionError::Timeout(60)))
-        );
+        let orchestrator = TranscriptionOrchestrator::new(Box::new(
+            MockProvider::new("primary").with_error(TranscriptionError::Timeout(60)),
+        ));
 
         let result = orchestrator
             .transcribe(&[0.0; 100], &TranscriptionConfig::default())

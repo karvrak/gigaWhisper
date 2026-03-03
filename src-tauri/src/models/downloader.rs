@@ -24,7 +24,10 @@ mod checksums {
     use crate::config::{ModelQuantization, WhisperModel};
 
     /// Get the expected SHA256 checksum for a model with specific quantization
-    pub fn get_checksum(model: &WhisperModel, quantization: &ModelQuantization) -> Option<&'static str> {
+    pub fn get_checksum(
+        model: &WhisperModel,
+        quantization: &ModelQuantization,
+    ) -> Option<&'static str> {
         match (model, quantization) {
             // Tiny models
             (WhisperModel::Tiny, ModelQuantization::F16) => {
@@ -266,10 +269,14 @@ pub async fn download_model_with_quantization(
 #[cfg(windows)]
 fn get_available_space(path: &std::path::Path) -> Option<u64> {
     use std::os::windows::ffi::OsStrExt;
-    use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
     use windows::core::PCWSTR;
+    use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
 
-    let path_str: Vec<u16> = path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+    let path_str: Vec<u16> = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
 
     // SAFETY: GetDiskFreeSpaceExW is safe to call because:
     // - path_str is a valid null-terminated UTF-16 string (OsStrExt::encode_wide + null)
@@ -287,7 +294,9 @@ fn get_available_space(path: &std::path::Path) -> Option<u64> {
             Some(&mut free_bytes_available),
             Some(&mut total_bytes),
             Some(&mut total_free_bytes),
-        ).is_ok() {
+        )
+        .is_ok()
+        {
             Some(free_bytes_available)
         } else {
             None
@@ -379,12 +388,13 @@ async fn download_model_internal_with_quantization(
         // Need extra 10% buffer for safety
         let needed = (model_size as f64 * 1.1) as u64;
         if available < needed {
-            return Err(DownloadError::InsufficientSpace {
-                needed,
-                available,
-            });
+            return Err(DownloadError::InsufficientSpace { needed, available });
         }
-        tracing::info!("Disk space check passed: {} bytes available, {} bytes needed", available, needed);
+        tracing::info!(
+            "Disk space check passed: {} bytes available, {} bytes needed",
+            available,
+            needed
+        );
     }
 
     let filename = model.filename_with_quantization(quantization);
@@ -565,7 +575,8 @@ mod tests {
     #[test]
     fn test_checksum_format() {
         // All checksums should be 64 hex characters (SHA256)
-        let checksum = checksums::get_checksum(&WhisperModel::Tiny, &ModelQuantization::F16).unwrap();
+        let checksum =
+            checksums::get_checksum(&WhisperModel::Tiny, &ModelQuantization::F16).unwrap();
         assert_eq!(checksum.len(), 64);
         assert!(checksum.chars().all(|c| c.is_ascii_hexdigit()));
     }
@@ -603,11 +614,9 @@ mod tests {
         }
 
         // Medium Q5_1 has no checksum, so verification should pass (skip)
-        let result = verify_model_checksum(
-            &file_path,
-            &WhisperModel::Medium,
-            &ModelQuantization::Q5_1,
-        ).await;
+        let result =
+            verify_model_checksum(&file_path, &WhisperModel::Medium, &ModelQuantization::Q5_1)
+                .await;
 
         assert!(result.is_ok());
     }

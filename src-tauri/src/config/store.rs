@@ -24,9 +24,7 @@ pub fn config_file() -> PathBuf {
 pub fn models_dir() -> PathBuf {
     directories::ProjectDirs::from("com", "gigawhisper", "GigaWhisper")
         .map(|dirs| dirs.data_dir().to_path_buf())
-        .unwrap_or_else(|| {
-            std::env::current_dir().unwrap_or_default().join("models")
-        })
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default().join("models"))
         .join("models")
 }
 
@@ -53,7 +51,8 @@ pub fn load_settings() -> Result<Settings, SettingsError> {
     if settings.recording.max_duration != sanitized.recording.max_duration
         || settings.recording.silence_timeout != sanitized.recording.silence_timeout
         || settings.transcription.local.threads != sanitized.transcription.local.threads
-        || settings.transcription.groq.timeout_seconds != sanitized.transcription.groq.timeout_seconds
+        || settings.transcription.groq.timeout_seconds
+            != sanitized.transcription.groq.timeout_seconds
         || settings.audio.vad.aggressiveness != sanitized.audio.vad.aggressiveness
         || settings.output.paste_delay != sanitized.output.paste_delay
     {
@@ -90,9 +89,6 @@ mod tests {
         let serialized = toml::to_string_pretty(&settings).unwrap();
         let deserialized: Settings = toml::from_str(&serialized).unwrap();
 
-        assert_eq!(
-            settings.shortcuts.record,
-            deserialized.shortcuts.record
-        );
+        assert_eq!(settings.shortcuts.record, deserialized.shortcuts.record);
     }
 }

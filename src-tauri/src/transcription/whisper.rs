@@ -205,7 +205,11 @@ impl WhisperProvider {
             self.model_path,
             if use_gpu { "enabled" } else { "disabled" },
             self.effective_threads,
-            if self.is_auto_threads() { " auto-detected" } else { "" }
+            if self.is_auto_threads() {
+                " auto-detected"
+            } else {
+                ""
+            }
         );
 
         Ok(())
@@ -233,9 +237,7 @@ impl WhisperProvider {
         let start = Instant::now();
 
         let guard = context.lock();
-        let ctx = guard
-            .as_ref()
-            .ok_or(TranscriptionError::ModelNotLoaded)?;
+        let ctx = guard.as_ref().ok_or(TranscriptionError::ModelNotLoaded)?;
 
         // Create state for this transcription
         let mut state = ctx
@@ -243,9 +245,8 @@ impl WhisperProvider {
             .map_err(|e| TranscriptionError::Failed(e.to_string()))?;
 
         // Configure parameters
-        let mut params = whisper_rs::FullParams::new(whisper_rs::SamplingStrategy::Greedy {
-            best_of: 1,
-        });
+        let mut params =
+            whisper_rs::FullParams::new(whisper_rs::SamplingStrategy::Greedy { best_of: 1 });
 
         params.set_n_threads(threads as i32);
         params.set_print_progress(false);
@@ -424,8 +425,8 @@ mod tests {
 
     #[test]
     fn test_with_timeout_zero() {
-        let provider = WhisperProvider::new(PathBuf::from("/fake/model.bin"), 0)
-            .with_timeout(Duration::ZERO);
+        let provider =
+            WhisperProvider::new(PathBuf::from("/fake/model.bin"), 0).with_timeout(Duration::ZERO);
 
         assert_eq!(provider.timeout(), Duration::ZERO);
     }
@@ -832,12 +833,8 @@ mod tests {
 
     #[test]
     fn test_full_configuration_chain() {
-        let provider = WhisperProvider::with_gpu(
-            PathBuf::from("/models/ggml-base.bin"),
-            4,
-            true,
-        )
-        .with_timeout(Duration::from_secs(180));
+        let provider = WhisperProvider::with_gpu(PathBuf::from("/models/ggml-base.bin"), 4, true)
+            .with_timeout(Duration::from_secs(180));
 
         assert_eq!(provider.model_path, PathBuf::from("/models/ggml-base.bin"));
         assert_eq!(provider.configured_threads, 4);

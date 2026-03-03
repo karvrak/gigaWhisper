@@ -4,7 +4,7 @@
 //! This helps reduce processing time by filtering out silent segments
 //! before sending audio to whisper.cpp.
 
-use webrtc_vad::{Vad, SampleRate, VadMode};
+use webrtc_vad::{SampleRate, Vad, VadMode};
 
 /// VAD aggressiveness level (maps to WebRTC VadMode)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -132,7 +132,8 @@ impl VoiceActivityDetector {
         }
 
         // Apply minimum speech duration filter
-        let min_frames = (self.config.min_speech_duration_ms / self.config.frame_duration_ms) as usize;
+        let min_frames =
+            (self.config.min_speech_duration_ms / self.config.frame_duration_ms) as usize;
         let speech_frames = filter_short_segments(&speech_frames, min_frames);
 
         // Apply padding around speech segments
@@ -212,7 +213,9 @@ impl VoiceActivityDetector {
             let start = i * frame_samples;
             let end = start + frame_samples;
             if end <= audio_i16.len()
-                && vad.is_voice_segment(&audio_i16[start..end]).unwrap_or(false)
+                && vad
+                    .is_voice_segment(&audio_i16[start..end])
+                    .unwrap_or(false)
             {
                 speech_count += 1;
             }
@@ -331,7 +334,12 @@ mod tests {
     // ========================================================================
 
     /// Generate a sine wave at the given frequency
-    fn generate_sine_wave(sample_rate: u32, frequency: f32, duration_ms: u32, amplitude: f32) -> Vec<f32> {
+    fn generate_sine_wave(
+        sample_rate: u32,
+        frequency: f32,
+        duration_ms: u32,
+        amplitude: f32,
+    ) -> Vec<f32> {
         let num_samples = (sample_rate as f32 * duration_ms as f32 / 1000.0) as usize;
         (0..num_samples)
             .map(|i| {
@@ -430,7 +438,10 @@ mod tests {
         let result = vad.filter_speech(&speech, sample_rate).unwrap();
 
         // Should detect speech (speech percentage should be significant)
-        assert!(result.speech_percentage > 0.0, "Should detect speech in speech-like signal");
+        assert!(
+            result.speech_percentage > 0.0,
+            "Should detect speech in speech-like signal"
+        );
         assert!(!result.audio.is_empty(), "Should return non-empty audio");
     }
 
@@ -583,7 +594,7 @@ mod tests {
         // Simulate "word - pause - word" pattern
         let audio = concatenate_audio(vec![
             generate_speech_like_signal(sample_rate, 300, 0.5), // Word 1
-            generate_silence(sample_rate, 150),                   // Short pause
+            generate_silence(sample_rate, 150),                 // Short pause
             generate_speech_like_signal(sample_rate, 300, 0.5), // Word 2
         ]);
 
@@ -744,7 +755,10 @@ mod tests {
         let speech = generate_speech_like_signal(sample_rate, 500, 0.5);
         let result = vad.contains_speech(&speech, sample_rate);
 
-        assert!(result.is_err(), "contains_speech should reject unsupported sample rate");
+        assert!(
+            result.is_err(),
+            "contains_speech should reject unsupported sample rate"
+        );
     }
 
     // ========================================================================
@@ -901,7 +915,10 @@ mod tests {
             elapsed
         );
         assert_eq!(result.original_duration_ms, 30000);
-        assert!(result.speech_segments > 0, "Should detect multiple speech segments");
+        assert!(
+            result.speech_segments > 0,
+            "Should detect multiple speech segments"
+        );
     }
 
     #[test]
@@ -1153,7 +1170,9 @@ mod tests {
         });
 
         let result_no_pad = vad_no_padding.filter_speech(&audio, sample_rate).unwrap();
-        let result_large_pad = vad_large_padding.filter_speech(&audio, sample_rate).unwrap();
+        let result_large_pad = vad_large_padding
+            .filter_speech(&audio, sample_rate)
+            .unwrap();
 
         // Large padding should result in more audio (includes silence around speech)
         assert!(

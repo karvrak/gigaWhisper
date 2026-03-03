@@ -90,11 +90,7 @@ fn parse_mouse_shortcut(shortcut: &str) -> Option<(u16, bool, bool, bool)> {
 
 /// Low-level mouse hook procedure
 #[cfg(windows)]
-unsafe extern "system" fn mouse_hook_proc(
-    code: i32,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
+unsafe extern "system" fn mouse_hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     if code >= 0 {
         let msg = wparam.0 as u32;
         if msg == WM_XBUTTONDOWN || msg == WM_XBUTTONUP {
@@ -163,15 +159,15 @@ pub fn install(shortcut: &str, app_handle: AppHandle) -> Result<(), Box<dyn std:
         .name("mouse-hook".to_string())
         .spawn(move || {
             unsafe {
-                let hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook_proc), HINSTANCE::default(), 0);
+                let hook =
+                    SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook_proc), HINSTANCE::default(), 0);
 
                 match hook {
                     Ok(hook) => {
                         {
                             let mut state = get_state().lock();
-                            state.thread_id = Some(
-                                windows::Win32::System::Threading::GetCurrentThreadId(),
-                            );
+                            state.thread_id =
+                                Some(windows::Win32::System::Threading::GetCurrentThreadId());
                         }
 
                         tracing::debug!("Mouse hook thread started, entering message pump");
@@ -233,7 +229,10 @@ pub fn uninstall() {
 
 // No-op implementations for non-Windows platforms
 #[cfg(not(windows))]
-pub fn install(_shortcut: &str, _app_handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+pub fn install(
+    _shortcut: &str,
+    _app_handle: tauri::AppHandle,
+) -> Result<(), Box<dyn std::error::Error>> {
     Err("Mouse button shortcuts are only supported on Windows".into())
 }
 

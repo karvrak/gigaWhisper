@@ -49,7 +49,9 @@ impl Settings {
     pub fn validate(&self) -> Result<(), SettingsError> {
         // Validate shortcuts are valid key combinations
         if self.shortcuts.record.is_empty() {
-            return Err(SettingsError::InvalidShortcut("record shortcut is empty".to_string()));
+            return Err(SettingsError::InvalidShortcut(
+                "record shortcut is empty".to_string(),
+            ));
         }
 
         // Validate Groq API key if cloud provider selected
@@ -445,7 +447,13 @@ impl WhisperModel {
 
     /// Get all model sizes
     pub fn all() -> &'static [WhisperModel] {
-        &[Self::Tiny, Self::Base, Self::Small, Self::Medium, Self::Large]
+        &[
+            Self::Tiny,
+            Self::Base,
+            Self::Small,
+            Self::Medium,
+            Self::Large,
+        ]
     }
 }
 
@@ -508,7 +516,6 @@ pub struct AudioSettings {
     pub vad: VadSettings,
 }
 
-
 impl AudioSettings {
     /// Validate audio settings
     pub fn validate(&self) -> Result<(), SettingsError> {
@@ -538,7 +545,7 @@ pub struct VadSettings {
 impl Default for VadSettings {
     fn default() -> Self {
         Self {
-            enabled: true,  // Enable by default for performance
+            enabled: true,     // Enable by default for performance
             aggressiveness: 2, // Aggressive mode
             min_speech_duration_ms: 100,
             padding_ms: 300,
@@ -583,7 +590,9 @@ impl VadSettings {
     /// Sanitize VAD settings
     pub fn sanitize(&mut self) {
         self.aggressiveness = self.aggressiveness.min(Self::MAX_AGGRESSIVENESS);
-        self.min_speech_duration_ms = self.min_speech_duration_ms.min(Self::MAX_MIN_SPEECH_DURATION_MS);
+        self.min_speech_duration_ms = self
+            .min_speech_duration_ms
+            .min(Self::MAX_MIN_SPEECH_DURATION_MS);
         self.padding_ms = self.padding_ms.min(Self::MAX_PADDING_MS);
     }
 }
@@ -711,7 +720,10 @@ mod tests {
         assert_eq!(settings.recording.mode, RecordingMode::PushToTalk);
         assert_eq!(settings.recording.max_duration, 300);
         assert_eq!(settings.shortcuts.record, "Ctrl+Space");
-        assert_eq!(settings.transcription.provider, TranscriptionProvider::Local);
+        assert_eq!(
+            settings.transcription.provider,
+            TranscriptionProvider::Local
+        );
         assert_eq!(settings.transcription.language, "auto");
         assert!(settings.ui.show_indicator);
     }
@@ -740,13 +752,16 @@ mod tests {
     fn test_recording_settings_sanitize() {
         let mut settings = RecordingSettings {
             mode: RecordingMode::Toggle,
-            max_duration: 10000, // Should be clamped
+            max_duration: 10000,     // Should be clamped
             silence_timeout: 100000, // Should be clamped
         };
         settings.sanitize();
 
         assert_eq!(settings.max_duration, RecordingSettings::MAX_DURATION_LIMIT);
-        assert_eq!(settings.silence_timeout, RecordingSettings::MAX_SILENCE_TIMEOUT);
+        assert_eq!(
+            settings.silence_timeout,
+            RecordingSettings::MAX_SILENCE_TIMEOUT
+        );
     }
 
     #[test]
@@ -822,7 +837,10 @@ mod tests {
         settings.sanitize();
 
         assert_eq!(settings.aggressiveness, VadSettings::MAX_AGGRESSIVENESS);
-        assert_eq!(settings.min_speech_duration_ms, VadSettings::MAX_MIN_SPEECH_DURATION_MS);
+        assert_eq!(
+            settings.min_speech_duration_ms,
+            VadSettings::MAX_MIN_SPEECH_DURATION_MS
+        );
         assert_eq!(settings.padding_ms, VadSettings::MAX_PADDING_MS);
     }
 
@@ -884,10 +902,22 @@ mod tests {
 
         let sanitized = settings.sanitize();
 
-        assert_eq!(sanitized.recording.max_duration, RecordingSettings::MAX_DURATION_LIMIT);
-        assert_eq!(sanitized.audio.vad.aggressiveness, VadSettings::MAX_AGGRESSIVENESS);
-        assert_eq!(sanitized.output.paste_delay, OutputSettings::MAX_PASTE_DELAY);
-        assert_eq!(sanitized.transcription.local.threads, TranscriptionSettings::MAX_THREADS);
+        assert_eq!(
+            sanitized.recording.max_duration,
+            RecordingSettings::MAX_DURATION_LIMIT
+        );
+        assert_eq!(
+            sanitized.audio.vad.aggressiveness,
+            VadSettings::MAX_AGGRESSIVENESS
+        );
+        assert_eq!(
+            sanitized.output.paste_delay,
+            OutputSettings::MAX_PASTE_DELAY
+        );
+        assert_eq!(
+            sanitized.transcription.local.threads,
+            TranscriptionSettings::MAX_THREADS
+        );
     }
 
     #[test]
@@ -927,8 +957,17 @@ mod tests {
 
     #[test]
     fn test_indicator_position_serialization() {
-        assert_eq!(serde_json::to_string(&IndicatorPosition::Cursor).unwrap(), "\"cursor\"");
-        assert_eq!(serde_json::to_string(&IndicatorPosition::Center).unwrap(), "\"center\"");
-        assert_eq!(serde_json::to_string(&IndicatorPosition::Corner).unwrap(), "\"corner\"");
+        assert_eq!(
+            serde_json::to_string(&IndicatorPosition::Cursor).unwrap(),
+            "\"cursor\""
+        );
+        assert_eq!(
+            serde_json::to_string(&IndicatorPosition::Center).unwrap(),
+            "\"center\""
+        );
+        assert_eq!(
+            serde_json::to_string(&IndicatorPosition::Corner).unwrap(),
+            "\"corner\""
+        );
     }
 }

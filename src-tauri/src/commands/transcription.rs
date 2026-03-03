@@ -24,7 +24,9 @@ pub struct GpuInfo {
 pub fn get_transcription_status(state: State<'_, AppState>) -> TranscriptionStatus {
     // Update status from current config before returning
     let config = state.config.read();
-    state.transcription_service.update_status_from_config(&config);
+    state
+        .transcription_service
+        .update_status_from_config(&config);
     drop(config);
 
     state.transcription_service.get_status()

@@ -12,8 +12,8 @@
 //!
 //! **Current Implementation**: Segment callbacks for progress feedback.
 
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 
 /// Callback type for streaming transcription progress
 pub type StreamingCallback = Box<dyn Fn(StreamingEvent) + Send + 'static>;
@@ -23,9 +23,7 @@ pub type StreamingCallback = Box<dyn Fn(StreamingEvent) + Send + 'static>;
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum StreamingEvent {
     /// Transcription started
-    Started {
-        audio_duration_ms: u64,
-    },
+    Started { audio_duration_ms: u64 },
     /// A segment has been decoded
     Segment {
         text: String,
@@ -35,18 +33,11 @@ pub enum StreamingEvent {
         total_segments: i32,
     },
     /// Progress update (percentage)
-    Progress {
-        percentage: i32,
-    },
+    Progress { percentage: i32 },
     /// Transcription completed
-    Completed {
-        full_text: String,
-        duration_ms: u64,
-    },
+    Completed { full_text: String, duration_ms: u64 },
     /// Transcription failed
-    Error {
-        message: String,
-    },
+    Error { message: String },
 }
 
 /// Streaming-capable transcription state
@@ -87,7 +78,14 @@ impl StreamingState {
     }
 
     /// Add a segment
-    pub fn add_segment(&mut self, text: String, start_ms: i64, end_ms: i64, index: i32, total: i32) {
+    pub fn add_segment(
+        &mut self,
+        text: String,
+        start_ms: i64,
+        end_ms: i64,
+        index: i32,
+        total: i32,
+    ) {
         self.total_segments = total;
         self.segments.push(text.clone());
 
@@ -405,7 +403,9 @@ mod tests {
 
     #[test]
     fn test_streaming_event_started() {
-        let event = StreamingEvent::Started { audio_duration_ms: 5000 };
+        let event = StreamingEvent::Started {
+            audio_duration_ms: 5000,
+        };
         if let StreamingEvent::Started { audio_duration_ms } = event {
             assert_eq!(audio_duration_ms, 5000);
         } else {
@@ -509,7 +509,9 @@ mod tests {
 
     #[test]
     fn test_streaming_event_serialize_started() {
-        let event = StreamingEvent::Started { audio_duration_ms: 5000 };
+        let event = StreamingEvent::Started {
+            audio_duration_ms: 5000,
+        };
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("started"));
         assert!(json.contains("5000"));
@@ -572,7 +574,9 @@ mod tests {
         }));
 
         // Simulate transcription flow
-        state.emit(StreamingEvent::Started { audio_duration_ms: 5000 });
+        state.emit(StreamingEvent::Started {
+            audio_duration_ms: 5000,
+        });
         state.add_segment("Hello".to_string(), 0, 1000, 0, 3);
         state.update_progress(33);
         state.add_segment("beautiful".to_string(), 1000, 2500, 1, 3);

@@ -19,8 +19,7 @@ pub enum ClipboardError {
 
 /// Get current clipboard text
 pub fn get_text() -> Result<String, ClipboardError> {
-    let mut clipboard = Clipboard::new()
-        .map_err(|e| ClipboardError::Access(e.to_string()))?;
+    let mut clipboard = Clipboard::new().map_err(|e| ClipboardError::Access(e.to_string()))?;
 
     clipboard
         .get_text()
@@ -29,8 +28,7 @@ pub fn get_text() -> Result<String, ClipboardError> {
 
 /// Set clipboard text
 pub fn set_text(text: &str) -> Result<(), ClipboardError> {
-    let mut clipboard = Clipboard::new()
-        .map_err(|e| ClipboardError::Access(e.to_string()))?;
+    let mut clipboard = Clipboard::new().map_err(|e| ClipboardError::Access(e.to_string()))?;
 
     clipboard
         .set_text(text)
@@ -57,8 +55,7 @@ pub async fn paste_text(text: &str) -> Result<(), ClipboardError> {
     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
     // Simulate paste
-    keyboard::send_ctrl_v()
-        .map_err(|e| ClipboardError::Set(e.to_string()))?;
+    keyboard::send_ctrl_v().map_err(|e| ClipboardError::Set(e.to_string()))?;
 
     // Wait for paste to complete
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;

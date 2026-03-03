@@ -102,10 +102,7 @@ pub fn get_cpu_optimization_summary() -> String {
 
     format!(
         "{} cores ({} physical), {} threads recommended, {}",
-        info.logical_cores,
-        info.physical_cores,
-        info.recommended_threads,
-        simd_status
+        info.logical_cores, info.physical_cores, info.recommended_threads, simd_status
     )
 }
 

@@ -20,10 +20,7 @@ fn get_update_endpoint() -> String {
 
 /// Check for updates and emit an event if one is available
 pub async fn check_for_updates<R: Runtime>(app: AppHandle<R>) {
-    tracing::info!(
-        "Checking for updates (variant: {})...",
-        BUILD_VARIANT
-    );
+    tracing::info!("Checking for updates (variant: {})...", BUILD_VARIANT);
     tracing::debug!("Update endpoint: {}", get_update_endpoint());
 
     let endpoint = match get_update_endpoint().parse() {
@@ -34,10 +31,7 @@ pub async fn check_for_updates<R: Runtime>(app: AppHandle<R>) {
         }
     };
 
-    let updater = match app
-        .updater_builder()
-        .endpoints(vec![endpoint])
-    {
+    let updater = match app.updater_builder().endpoints(vec![endpoint]) {
         Ok(builder) => match builder.build() {
             Ok(updater) => updater,
             Err(e) => {
@@ -118,8 +112,8 @@ pub async fn install_update(app: AppHandle) -> Result<(), String> {
     update
         .download_and_install(
             move |chunk_length, content_length: Option<u64>| {
-                let progress = content_length
-                    .map(|total| (chunk_length as f64 / total as f64 * 100.0) as u32);
+                let progress =
+                    content_length.map(|total| (chunk_length as f64 / total as f64 * 100.0) as u32);
                 let _ = app_clone.emit(
                     "update-download-progress",
                     DownloadProgress {

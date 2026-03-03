@@ -85,13 +85,13 @@ fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
             fmt::layer()
                 .with_ansi(true)
                 .with_target(true)
-                .with_thread_ids(false)
+                .with_thread_ids(false),
         )
         .with(
             fmt::layer()
                 .with_ansi(false)
                 .with_target(true)
-                .with_writer(non_blocking)
+                .with_writer(non_blocking),
         )
         .init();
 

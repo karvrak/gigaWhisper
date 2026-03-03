@@ -14,8 +14,8 @@ use std::time::{Duration, Instant};
 
 // Re-export modules from the library crate
 use gigawhisper_lib::audio::{
-    resample, RingBuffer, VadConfig, VadAggressiveness, VoiceActivityDetector, encode_wav,
-    normalize, duration_seconds, has_voice_activity,
+    duration_seconds, encode_wav, has_voice_activity, normalize, resample, RingBuffer,
+    VadAggressiveness, VadConfig, VoiceActivityDetector,
 };
 use gigawhisper_lib::transcription::{
     TranscriptionConfig, TranscriptionError, TranscriptionOrchestrator, TranscriptionProvider,
@@ -149,7 +149,8 @@ impl TranscriptionProvider for MockTranscriptionProvider {
         _config: &TranscriptionConfig,
     ) -> Result<TranscriptionResult, TranscriptionError> {
         self.call_count.fetch_add(1, Ordering::SeqCst);
-        self.received_audio_len.store(audio.len() as u32, Ordering::SeqCst);
+        self.received_audio_len
+            .store(audio.len() as u32, Ordering::SeqCst);
 
         // Simulate processing delay if configured
         if let Some(delay) = self.delay_ms {
@@ -157,9 +158,10 @@ impl TranscriptionProvider for MockTranscriptionProvider {
         }
 
         if self.should_fail {
-            Err(self.fail_error.clone().unwrap_or_else(|| {
-                TranscriptionError::Failed("Mock failure".to_string())
-            }))
+            Err(self
+                .fail_error
+                .clone()
+                .unwrap_or_else(|| TranscriptionError::Failed("Mock failure".to_string())))
         } else {
             Ok(TranscriptionResult {
                 text: "Transcribed text from mock provider".to_string(),
@@ -209,7 +211,7 @@ mod buffer_resample_integration {
 
         // Verify resampled length (should be ~1/3 of original for 48k->16k)
         let expected_len = whisper_rate as usize; // 1 second at 16kHz
-        // Allow 10% tolerance for resampler overhead
+                                                  // Allow 10% tolerance for resampler overhead
         assert!(
             (resampled.len() as f32 - expected_len as f32).abs() < expected_len as f32 * 0.1,
             "Expected ~{} samples, got {}",
@@ -261,8 +263,10 @@ mod buffer_resample_integration {
         let resampled = resample(&original, 48000, 16000).unwrap();
 
         // Calculate RMS of both
-        let original_rms: f32 = (original.iter().map(|s| s * s).sum::<f32>() / original.len() as f32).sqrt();
-        let resampled_rms: f32 = (resampled.iter().map(|s| s * s).sum::<f32>() / resampled.len() as f32).sqrt();
+        let original_rms: f32 =
+            (original.iter().map(|s| s * s).sum::<f32>() / original.len() as f32).sqrt();
+        let resampled_rms: f32 =
+            (resampled.iter().map(|s| s * s).sum::<f32>() / resampled.len() as f32).sqrt();
 
         // RMS should be similar (within 20% for FFT resampler)
         let ratio = resampled_rms / original_rms;
@@ -295,7 +299,10 @@ mod resample_vad_integration {
 
         // Should detect speech
         assert!(result.speech_segments > 0, "Should detect speech segments");
-        assert!(result.speech_percentage > 50.0, "Should have significant speech");
+        assert!(
+            result.speech_percentage > 50.0,
+            "Should have significant speech"
+        );
     }
 
     #[test]
@@ -311,7 +318,10 @@ mod resample_vad_integration {
         let result = vad.filter_speech(&silence_16k, 16000).unwrap();
 
         // Should detect minimal or no speech
-        assert!(result.speech_percentage < 10.0, "Silence should have minimal speech detection");
+        assert!(
+            result.speech_percentage < 10.0,
+            "Silence should have minimal speech detection"
+        );
     }
 
     #[test]
@@ -343,7 +353,11 @@ mod resample_vad_integration {
 
         let mut results = Vec::new();
 
-        for mode in [VadAggressiveness::Quality, VadAggressiveness::Aggressive, VadAggressiveness::VeryAggressive] {
+        for mode in [
+            VadAggressiveness::Quality,
+            VadAggressiveness::Aggressive,
+            VadAggressiveness::VeryAggressive,
+        ] {
             let config = VadConfig {
                 mode,
                 min_speech_duration_ms: 100,
@@ -490,7 +504,11 @@ mod full_pipeline_integration {
                 .transcribe(&vad_result.audio, &TranscriptionConfig::default())
                 .await;
 
-            assert!(result.is_ok(), "Pipeline should work with {}Hz input", device_rate);
+            assert!(
+                result.is_ok(),
+                "Pipeline should work with {}Hz input",
+                device_rate
+            );
         }
     }
 
@@ -560,8 +578,8 @@ mod error_cascade_tests {
         let vad_result = vad.filter_speech(&audio, 16000).unwrap();
 
         // But transcription fails
-        let provider = MockTranscriptionProvider::new("mock")
-            .with_error(TranscriptionError::ModelNotLoaded);
+        let provider =
+            MockTranscriptionProvider::new("mock").with_error(TranscriptionError::ModelNotLoaded);
         let orchestrator = TranscriptionOrchestrator::new(Box::new(provider));
 
         let result = orchestrator
@@ -569,7 +587,10 @@ mod error_cascade_tests {
             .await;
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), TranscriptionError::ModelNotLoaded));
+        assert!(matches!(
+            result.unwrap_err(),
+            TranscriptionError::ModelNotLoaded
+        ));
     }
 
     #[tokio::test]
@@ -580,14 +601,13 @@ mod error_cascade_tests {
         let vad_result = vad.filter_speech(&audio, 16000).unwrap();
 
         // Primary fails, fallback succeeds
-        let primary = MockTranscriptionProvider::new("groq")
-            .with_error(TranscriptionError::NetworkError("Connection failed".to_string()));
+        let primary = MockTranscriptionProvider::new("groq").with_error(
+            TranscriptionError::NetworkError("Connection failed".to_string()),
+        );
         let fallback = MockTranscriptionProvider::new("whisper_local");
 
-        let orchestrator = TranscriptionOrchestrator::with_fallback(
-            Box::new(primary),
-            Box::new(fallback),
-        );
+        let orchestrator =
+            TranscriptionOrchestrator::with_fallback(Box::new(primary), Box::new(fallback));
 
         let result = orchestrator
             .transcribe(&vad_result.audio, &TranscriptionConfig::default())
@@ -609,10 +629,8 @@ mod error_cascade_tests {
         let fallback = MockTranscriptionProvider::new("whisper")
             .with_error(TranscriptionError::ModelNotLoaded);
 
-        let orchestrator = TranscriptionOrchestrator::with_fallback(
-            Box::new(primary),
-            Box::new(fallback),
-        );
+        let orchestrator =
+            TranscriptionOrchestrator::with_fallback(Box::new(primary), Box::new(fallback));
 
         let result = orchestrator
             .transcribe(&vad_result.audio, &TranscriptionConfig::default())
@@ -800,7 +818,9 @@ mod data_integrity_tests {
             assert!(
                 (float_sample - expected).abs() < 0.001,
                 "Sample {} mismatch: expected {}, got {}",
-                i, expected, float_sample
+                i,
+                expected,
+                float_sample
             );
         }
     }
@@ -908,13 +928,27 @@ mod edge_case_tests {
 
         // Audio slightly below threshold
         let below_threshold = vec![threshold - 0.05; 100];
-        let rms_below = (below_threshold.iter().map(|s| s * s).sum::<f32>() / below_threshold.len() as f32).sqrt();
-        assert!(!has_voice_activity(&below_threshold, threshold), "RMS {} should be below threshold {}", rms_below, threshold);
+        let rms_below = (below_threshold.iter().map(|s| s * s).sum::<f32>()
+            / below_threshold.len() as f32)
+            .sqrt();
+        assert!(
+            !has_voice_activity(&below_threshold, threshold),
+            "RMS {} should be below threshold {}",
+            rms_below,
+            threshold
+        );
 
         // Audio above threshold
         let above_threshold = vec![threshold + 0.1; 100];
-        let rms_above = (above_threshold.iter().map(|s| s * s).sum::<f32>() / above_threshold.len() as f32).sqrt();
-        assert!(has_voice_activity(&above_threshold, threshold), "RMS {} should be above threshold {}", rms_above, threshold);
+        let rms_above = (above_threshold.iter().map(|s| s * s).sum::<f32>()
+            / above_threshold.len() as f32)
+            .sqrt();
+        assert!(
+            has_voice_activity(&above_threshold, threshold),
+            "RMS {} should be above threshold {}",
+            rms_above,
+            threshold
+        );
     }
 }
 

@@ -137,7 +137,11 @@ impl AudioCapture {
         // buffer_duration_ms is in milliseconds, convert to seconds
         let buffer_seconds = (config.buffer_duration_ms as f64 / 1000.0).max(60.0); // Minimum 60s
         let buffer_samples = (device_sample_rate as f64 * buffer_seconds) as usize;
-        tracing::info!("Audio buffer size: {}s ({} samples)", buffer_seconds, buffer_samples);
+        tracing::info!(
+            "Audio buffer size: {}s ({} samples)",
+            buffer_seconds,
+            buffer_samples
+        );
         let buffer = Arc::new(Mutex::new(RingBuffer::new(buffer_samples)));
         let is_recording = Arc::new(Mutex::new(false));
         let last_error: Arc<Mutex<Option<StreamError>>> = Arc::new(Mutex::new(None));

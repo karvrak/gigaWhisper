@@ -2,8 +2,8 @@
 //!
 //! Handle text output and history operations.
 
-use tauri::State;
 use crate::AppState;
+use tauri::State;
 
 /// Paste text to the active application
 #[tauri::command]
@@ -17,8 +17,8 @@ pub async fn paste_text(_state: State<'_, AppState>, text: String) -> Result<(),
     // 4. Restore clipboard
 
     // For now, just set clipboard
-    let mut clipboard = arboard::Clipboard::new()
-        .map_err(|e| format!("Failed to access clipboard: {}", e))?;
+    let mut clipboard =
+        arboard::Clipboard::new().map_err(|e| format!("Failed to access clipboard: {}", e))?;
 
     clipboard
         .set_text(&text)

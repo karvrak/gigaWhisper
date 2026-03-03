@@ -78,12 +78,17 @@ impl TranscriptionProvider for GroqProvider {
         config: &TranscriptionConfig,
     ) -> Result<TranscriptionResult, TranscriptionError> {
         let api_key = self.get_api_key().ok_or_else(|| {
-            TranscriptionError::ApiError("API key not configured. Please set your Groq API key in settings.".to_string())
+            TranscriptionError::ApiError(
+                "API key not configured. Please set your Groq API key in settings.".to_string(),
+            )
         })?;
 
         // Validate API key format
         if let Err(e) = SecretsManager::validate_groq_api_key(&api_key) {
-            return Err(TranscriptionError::ApiError(format!("Invalid API key: {}", e)));
+            return Err(TranscriptionError::ApiError(format!(
+                "Invalid API key: {}",
+                e
+            )));
         }
 
         let start = Instant::now();
@@ -195,9 +200,8 @@ impl TranscriptionProvider for GroqProvider {
         }
 
         // All retries exhausted
-        Err(last_error.unwrap_or_else(|| {
-            TranscriptionError::Failed("All retry attempts failed".to_string())
-        }))
+        Err(last_error
+            .unwrap_or_else(|| TranscriptionError::Failed("All retry attempts failed".to_string())))
     }
 
     fn name(&self) -> &'static str {
@@ -256,7 +260,10 @@ mod tests {
     #[test]
     fn test_default_timeout() {
         let provider = GroqProvider::new(None);
-        assert_eq!(provider.timeout(), Duration::from_secs(DEFAULT_TIMEOUT_SECONDS));
+        assert_eq!(
+            provider.timeout(),
+            Duration::from_secs(DEFAULT_TIMEOUT_SECONDS)
+        );
     }
 
     #[test]
@@ -315,9 +322,9 @@ mod tests {
         let delay_1 = GroqProvider::retry_delay(1);
         let delay_2 = GroqProvider::retry_delay(2);
 
-        assert_eq!(delay_0, Duration::from_millis(1000));  // 1s
-        assert_eq!(delay_1, Duration::from_millis(2000));  // 2s
-        assert_eq!(delay_2, Duration::from_millis(4000));  // 4s
+        assert_eq!(delay_0, Duration::from_millis(1000)); // 1s
+        assert_eq!(delay_1, Duration::from_millis(2000)); // 2s
+        assert_eq!(delay_2, Duration::from_millis(4000)); // 4s
     }
 
     #[test]
@@ -400,11 +407,7 @@ mod tests {
 
     #[test]
     fn test_full_configuration() {
-        let provider = GroqProvider::with_config(
-            Some("custom-model".to_string()),
-            120,
-            5,
-        );
+        let provider = GroqProvider::with_config(Some("custom-model".to_string()), 120, 5);
 
         assert_eq!(provider.model, "custom-model");
         assert_eq!(provider.timeout(), Duration::from_secs(120));

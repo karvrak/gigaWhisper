@@ -87,9 +87,10 @@ impl SecretsManager {
 
         // Check maximum length to prevent abuse
         if api_key.len() > MAX_API_KEY_LENGTH {
-            return Err(SecretsError::InvalidFormat(
-                format!("API key is too long (max {} characters)", MAX_API_KEY_LENGTH),
-            ));
+            return Err(SecretsError::InvalidFormat(format!(
+                "API key is too long (max {} characters)",
+                MAX_API_KEY_LENGTH
+            )));
         }
 
         // Groq API keys start with "gsk_"
@@ -191,7 +192,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("empty"), "Expected 'empty' in message, got: {}", msg);
+                assert!(
+                    msg.contains("empty"),
+                    "Expected 'empty' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for empty key"),
         }
@@ -203,7 +208,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("empty"), "Expected 'empty' in message, got: {}", msg);
+                assert!(
+                    msg.contains("empty"),
+                    "Expected 'empty' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for whitespace-only key"),
         }
@@ -215,7 +224,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("empty"), "Expected 'empty' in message, got: {}", msg);
+                assert!(
+                    msg.contains("empty"),
+                    "Expected 'empty' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for tab-only key"),
         }
@@ -231,7 +244,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("gsk_"), "Expected 'gsk_' in message, got: {}", msg);
+                assert!(
+                    msg.contains("gsk_"),
+                    "Expected 'gsk_' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for invalid prefix"),
         }
@@ -243,7 +260,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("gsk_"), "Expected 'gsk_' in message, got: {}", msg);
+                assert!(
+                    msg.contains("gsk_"),
+                    "Expected 'gsk_' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for wrong prefix"),
         }
@@ -256,7 +277,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("gsk_"), "Expected 'gsk_' in message, got: {}", msg);
+                assert!(
+                    msg.contains("gsk_"),
+                    "Expected 'gsk_' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for uppercase prefix"),
         }
@@ -279,7 +304,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("short"), "Expected 'short' in message, got: {}", msg);
+                assert!(
+                    msg.contains("short"),
+                    "Expected 'short' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for too short key"),
         }
@@ -292,7 +321,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("short"), "Expected 'short' in message, got: {}", msg);
+                assert!(
+                    msg.contains("short"),
+                    "Expected 'short' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for boundary short key"),
         }
@@ -306,7 +339,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("too long"), "Expected 'too long' in message, got: {}", msg);
+                assert!(
+                    msg.contains("too long"),
+                    "Expected 'too long' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for too long key"),
         }
@@ -320,7 +357,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("too long"), "Expected 'too long' in message, got: {}", msg);
+                assert!(
+                    msg.contains("too long"),
+                    "Expected 'too long' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for boundary long key"),
         }
@@ -336,7 +377,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("invalid characters"), "Expected 'invalid characters' in message, got: {}", msg);
+                assert!(
+                    msg.contains("invalid characters"),
+                    "Expected 'invalid characters' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for special characters"),
         }
@@ -348,7 +393,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("invalid characters"), "Expected 'invalid characters' in message, got: {}", msg);
+                assert!(
+                    msg.contains("invalid characters"),
+                    "Expected 'invalid characters' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for spaces in middle"),
         }
@@ -360,7 +409,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(SecretsError::InvalidFormat(msg)) => {
-                assert!(msg.contains("invalid characters"), "Expected 'invalid characters' in message, got: {}", msg);
+                assert!(
+                    msg.contains("invalid characters"),
+                    "Expected 'invalid characters' in message, got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidFormat error for hyphens"),
         }
@@ -547,7 +600,10 @@ mod tests {
 
             // Verify deleted
             let get_result = entry.get_password();
-            assert!(get_result.is_err(), "Password should not exist after deletion");
+            assert!(
+                get_result.is_err(),
+                "Password should not exist after deletion"
+            );
         }
 
         #[test]
@@ -649,7 +705,10 @@ mod tests {
 
             // This should pass validation (whitespace is trimmed)
             let validation_result = SecretsManager::validate_groq_api_key(key_with_spaces);
-            assert!(validation_result.is_ok(), "Validation should pass with trimmed whitespace");
+            assert!(
+                validation_result.is_ok(),
+                "Validation should pass with trimmed whitespace"
+            );
         }
     }
 
@@ -672,8 +731,14 @@ mod tests {
         // Ensure the max length constant is set appropriately
         // Groq keys are ~56 chars, so 100 should be plenty
         const MAX_API_KEY_LENGTH: usize = 100;
-        assert!(MAX_API_KEY_LENGTH >= 56, "Max length should accommodate typical Groq keys");
-        assert!(MAX_API_KEY_LENGTH <= 500, "Max length should not be excessively large");
+        assert!(
+            MAX_API_KEY_LENGTH >= 56,
+            "Max length should accommodate typical Groq keys"
+        );
+        assert!(
+            MAX_API_KEY_LENGTH <= 500,
+            "Max length should not be excessively large"
+        );
     }
 
     // ============================================================================

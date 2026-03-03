@@ -53,18 +53,18 @@ impl TranscriptionHistory {
         let path = history_file_path();
         if path.exists() {
             match std::fs::read_to_string(&path) {
-                Ok(content) => {
-                    match serde_json::from_str(&content) {
-                        Ok(history) => {
-                            tracing::info!("Loaded {} history entries",
-                            { let TranscriptionHistory { entries } = &history; entries.len() });
-                            return history;
-                        }
-                        Err(e) => {
-                            tracing::warn!("Failed to parse history file: {}", e);
-                        }
+                Ok(content) => match serde_json::from_str(&content) {
+                    Ok(history) => {
+                        tracing::info!("Loaded {} history entries", {
+                            let TranscriptionHistory { entries } = &history;
+                            entries.len()
+                        });
+                        return history;
                     }
-                }
+                    Err(e) => {
+                        tracing::warn!("Failed to parse history file: {}", e);
+                    }
+                },
                 Err(e) => {
                     tracing::warn!("Failed to read history file: {}", e);
                 }
@@ -82,8 +82,7 @@ impl TranscriptionHistory {
             std::fs::create_dir_all(parent)?;
         }
 
-        let content = serde_json::to_string_pretty(self)
-            .map_err(std::io::Error::other)?;
+        let content = serde_json::to_string_pretty(self).map_err(std::io::Error::other)?;
 
         std::fs::write(&path, content)?;
         tracing::debug!("History saved to {:?}", path);
@@ -153,7 +152,11 @@ pub fn audio_dir() -> PathBuf {
 }
 
 /// Save audio samples to a WAV file and return the path
-pub fn save_audio_file(samples: &[f32], sample_rate: u32, id: &str) -> Result<PathBuf, std::io::Error> {
+pub fn save_audio_file(
+    samples: &[f32],
+    sample_rate: u32,
+    id: &str,
+) -> Result<PathBuf, std::io::Error> {
     let audio_path = audio_dir();
     std::fs::create_dir_all(&audio_path)?;
 
@@ -167,18 +170,17 @@ pub fn save_audio_file(samples: &[f32], sample_rate: u32, id: &str) -> Result<Pa
         sample_format: hound::SampleFormat::Int,
     };
 
-    let mut writer = hound::WavWriter::create(&file_path, spec)
-        .map_err(std::io::Error::other)?;
+    let mut writer = hound::WavWriter::create(&file_path, spec).map_err(std::io::Error::other)?;
 
     for &sample in samples {
         // Convert f32 [-1.0, 1.0] to i16
         let sample_i16 = (sample * 32767.0).clamp(-32768.0, 32767.0) as i16;
-        writer.write_sample(sample_i16)
+        writer
+            .write_sample(sample_i16)
             .map_err(std::io::Error::other)?;
     }
 
-    writer.finalize()
-        .map_err(std::io::Error::other)?;
+    writer.finalize().map_err(std::io::Error::other)?;
 
     tracing::debug!("Audio saved to {:?}", file_path);
     Ok(file_path)
@@ -399,7 +401,7 @@ mod tests {
             file.write_all(&[0, 0x7D, 0, 0])?; // Byte rate
             file.write_all(&[2, 0])?; // Block align
             file.write_all(&[16, 0])?; // Bits per sample
-            // data chunk
+                                       // data chunk
             file.write_all(b"data")?;
             file.write_all(&[0, 0, 0, 0])?; // Data size
             Ok(file_path)
@@ -424,7 +426,9 @@ mod tests {
 
         fn clear_with_audio(&mut self) {
             // Collect all audio paths before clearing
-            let audio_paths: Vec<String> = self.history.entries()
+            let audio_paths: Vec<String> = self
+                .history
+                .entries()
                 .iter()
                 .filter_map(|e| e.audio_path.clone())
                 .collect();
@@ -449,7 +453,8 @@ mod tests {
         let mut test_history = TestableHistory::new(&temp_dir);
 
         // Create an audio file
-        let audio_path = test_history.create_audio_file("entry-1")
+        let audio_path = test_history
+            .create_audio_file("entry-1")
             .expect("Failed to create audio file");
 
         // Create entry with audio path
@@ -533,7 +538,8 @@ mod tests {
         let mut test_history = TestableHistory::new(&temp_dir);
 
         // Create audio file and entry
-        let audio_path = test_history.create_audio_file("to-delete")
+        let audio_path = test_history
+            .create_audio_file("to-delete")
             .expect("Failed to create audio file");
 
         let entry = create_test_entry(
@@ -574,7 +580,8 @@ mod tests {
         // Create multiple entries with audio
         let mut audio_paths = Vec::new();
         for i in 0..5 {
-            let audio_path = test_history.create_audio_file(&format!("audio-{}", i))
+            let audio_path = test_history
+                .create_audio_file(&format!("audio-{}", i))
                 .expect("Failed to create audio file");
             audio_paths.push(audio_path.clone());
 
@@ -622,7 +629,11 @@ mod tests {
             let mut test_history = TestableHistory::new(&temp_dir);
 
             let entry1 = create_test_entry("persist-1", "First entry", None);
-            let entry2 = create_test_entry("persist-2", "Second entry", Some("/path/to/audio.wav".to_string()));
+            let entry2 = create_test_entry(
+                "persist-2",
+                "Second entry",
+                Some("/path/to/audio.wav".to_string()),
+            );
             let entry3 = create_test_entry("persist-3", "Third entry", None);
 
             test_history.history.add(entry1);
@@ -694,8 +705,11 @@ mod tests {
         let history_path = temp_dir.path().join("history.json");
 
         // Write truncated JSON (simulating crash during write)
-        fs::write(&history_path, r#"{"entries": [{"id": "test-1", "text": "Hello"#)
-            .expect("Failed to write truncated file");
+        fs::write(
+            &history_path,
+            r#"{"entries": [{"id": "test-1", "text": "Hello"#,
+        )
+        .expect("Failed to write truncated file");
 
         let mut test_history = TestableHistory::new(&temp_dir);
         test_history.load_graceful();
@@ -841,7 +855,9 @@ mod tests {
         assert!(test_history.history.is_empty());
         assert_eq!(test_history.history.len(), 0);
 
-        test_history.history.add(create_test_entry("1", "test", None));
+        test_history
+            .history
+            .add(create_test_entry("1", "test", None));
 
         assert!(!test_history.history.is_empty());
         assert_eq!(test_history.history.len(), 1);

@@ -319,9 +319,13 @@ async fn stop_recording_internal(app: &AppHandle) -> Result<String, String> {
                 .show();
 
             // Emit error event to frontend
-            let _ = app.emit("recording:microphone-error", "Microphone disconnected during recording");
+            let _ = app.emit(
+                "recording:microphone-error",
+                "Microphone disconnected during recording",
+            );
 
-            *state.recording_state.write() = RecordingState::Error("Microphone disconnected".to_string());
+            *state.recording_state.write() =
+                RecordingState::Error("Microphone disconnected".to_string());
             let _ = app.emit("recording:state-changed", "error");
             hide_recording_indicator(app);
 
@@ -673,7 +677,10 @@ mod tests {
             // Should detect conflict regardless of case
             let result = shortcuts_conflict("ctrl+space", "CTRL+SPACE");
             assert!(result.is_ok());
-            assert!(result.unwrap(), "Case should not matter for conflict detection");
+            assert!(
+                result.unwrap(),
+                "Case should not matter for conflict detection"
+            );
         }
     }
 
@@ -742,7 +749,10 @@ mod tests {
             let press = determine_ptt_action(ShortcutState::Pressed);
             let release = determine_ptt_action(ShortcutState::Released);
 
-            assert_ne!(press, release, "Press and release should have different actions");
+            assert_ne!(
+                press, release,
+                "Press and release should have different actions"
+            );
             assert_eq!(press, RecordingAction::StartRecording);
             assert_eq!(release, RecordingAction::StopRecording);
         }

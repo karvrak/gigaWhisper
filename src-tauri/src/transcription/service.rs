@@ -3,7 +3,9 @@
 //! Centralized service for managing transcription operations.
 //! Handles provider caching, status tracking, and shared logic.
 
-use super::{GroqProvider, TranscriptionConfig, TranscriptionProvider, TranscriptionResult, WhisperProvider};
+use super::{
+    GroqProvider, TranscriptionConfig, TranscriptionProvider, TranscriptionResult, WhisperProvider,
+};
 use crate::audio::{resample, VadAggressiveness, VadConfig, VoiceActivityDetector};
 use crate::config::{Settings, TranscriptionProvider as ConfigProvider};
 use crate::output;
@@ -80,14 +82,17 @@ impl TranscriptionService {
 
         // Check if model is loaded
         let cached = self.cached_whisper.read();
-        status.model_loaded = cached.as_ref().map(|c| c.provider.is_model_loaded()).unwrap_or(false);
+        status.model_loaded = cached
+            .as_ref()
+            .map(|c| c.provider.is_model_loaded())
+            .unwrap_or(false);
     }
 
     /// Preload the Whisper model (call during startup or settings change)
     pub fn preload_model(&self, config: &Settings) -> Result<(), String> {
         if config.transcription.provider == ConfigProvider::Local {
-            let model_path = crate::config::models_dir()
-                .join(config.transcription.local.model_filename());
+            let model_path =
+                crate::config::models_dir().join(config.transcription.local.model_filename());
             let threads = config.transcription.local.threads;
             let gpu_enabled = config.transcription.local.gpu_enabled;
 
@@ -184,8 +189,8 @@ impl TranscriptionService {
                     .map_err(|e| e.to_string())
             }
             ConfigProvider::Local => {
-                let model_path = crate::config::models_dir()
-                    .join(config.transcription.local.model_filename());
+                let model_path =
+                    crate::config::models_dir().join(config.transcription.local.model_filename());
                 let threads = config.transcription.local.threads;
                 let gpu_enabled = config.transcription.local.gpu_enabled;
 
@@ -195,7 +200,11 @@ impl TranscriptionService {
                 // Get a clone of the cached provider (cheap because context is Arc)
                 let provider = {
                     let cached = self.cached_whisper.read();
-                    cached.as_ref().ok_or("Provider not initialized")?.provider.clone()
+                    cached
+                        .as_ref()
+                        .ok_or("Provider not initialized")?
+                        .provider
+                        .clone()
                 };
 
                 // Transcribe using the cloned provider (no lock held across await)
@@ -299,7 +308,8 @@ impl TranscriptionService {
 
         // Calculate audio durations for metrics
         let original_audio_ms = (samples.len() as u64 * 1000) / WHISPER_SAMPLE_RATE as u64;
-        let filtered_audio_ms = (samples_for_transcription.len() as u64 * 1000) / WHISPER_SAMPLE_RATE as u64;
+        let filtered_audio_ms =
+            (samples_for_transcription.len() as u64 * 1000) / WHISPER_SAMPLE_RATE as u64;
         let vad_was_enabled = config.audio.vad.enabled;
 
         // Perform transcription
@@ -393,13 +403,11 @@ impl TranscriptionService {
         let should_paste = output::should_auto_paste();
 
         if should_paste {
-            output::copy_to_clipboard(text)
-                .map_err(|e| format!("Clipboard error: {}", e))?;
+            output::copy_to_clipboard(text).map_err(|e| format!("Clipboard error: {}", e))?;
 
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-            output::send_ctrl_v()
-                .map_err(|e| format!("Keyboard error: {}", e))?;
+            output::send_ctrl_v().map_err(|e| format!("Keyboard error: {}", e))?;
 
             tracing::info!("Text pasted to active window");
         } else {
