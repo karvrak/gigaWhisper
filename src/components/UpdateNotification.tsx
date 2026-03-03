@@ -81,12 +81,12 @@ export function UpdateNotification() {
     <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-slide-up">
       <div className="card overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-blue-50 dark:bg-blue-500/10 border-b border-gray-200/80 dark:border-gray-700/80">
+        <div className="flex items-center justify-between px-4 py-3 bg-indigo-50 dark:bg-indigo-500/10 border-b border-gray-200/80 dark:border-violet-500/15">
           <div className="flex items-center gap-2">
             {state === 'ready' ? (
               <CheckCircle className="w-5 h-5 text-green-500" />
             ) : (
-              <Download className="w-5 h-5 text-blue-500" />
+              <Download className="w-5 h-5 text-indigo-500" />
             )}
             <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
               {state === 'ready' ? 'Update Ready' : 'Update Available'}
@@ -95,7 +95,7 @@ export function UpdateNotification() {
           {state !== 'downloading' && (
             <button
               onClick={handleDismiss}
-              className="p-1.5 hover:bg-gray-200/70 dark:hover:bg-gray-700/50 rounded-lg transition-colors duration-150"
+              className="p-1.5 hover:bg-gray-200/70 dark:hover:bg-[#252136]/50 rounded-lg transition-colors duration-150"
             >
               <X className="w-4 h-4 text-gray-500" />
             </button>
@@ -140,14 +140,14 @@ export function UpdateNotification() {
               <>
                 <button
                   onClick={handleInstall}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium transition-colors duration-150"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-500 to-violet-500 text-white rounded-lg hover:from-indigo-600 hover:to-violet-600 text-sm font-medium transition-colors duration-150"
                 >
                   <Download className="w-4 h-4" />
                   Update Now
                 </button>
                 <button
                   onClick={handleDismiss}
-                  className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg text-sm transition-colors duration-150"
+                  className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#252136]/50 rounded-lg text-sm transition-colors duration-150"
                 >
                   Later
                 </button>

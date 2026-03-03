@@ -156,8 +156,8 @@ describe('SettingsPanel', () => {
       const transcriptionTab = screen.getByText('Transcription');
       await user.click(transcriptionTab);
 
-      // The tab should have active styling (border-blue-500 class)
-      expect(transcriptionTab).toHaveClass('border-blue-500');
+      // The tab should have active styling (text-indigo-600 class)
+      expect(transcriptionTab).toHaveClass('text-indigo-600');
     });
   });
 

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Keyboard } from 'lucide-react';
 
 interface HotkeyInputProps {
@@ -6,8 +6,20 @@ interface HotkeyInputProps {
   onChange: (value: string) => void;
 }
 
+const MOUSE_BUTTON_NAMES: Record<number, string> = {
+  3: 'Mouse4',
+  4: 'Mouse5',
+};
+
 export function HotkeyInput({ value, onChange }: HotkeyInputProps) {
   const [isRecording, setIsRecording] = useState(false);
+  const inputRef = useRef<HTMLDivElement>(null);
+
+  const startRecording = useCallback(() => {
+    setIsRecording(true);
+    // Focus the input div so it captures keyboard events
+    inputRef.current?.focus();
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -42,27 +54,58 @@ export function HotkeyInput({ value, onChange }: HotkeyInputProps) {
     [isRecording, onChange]
   );
 
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isRecording) return;
+
+      // Only capture extra mouse buttons (Mouse4, Mouse5, etc.)
+      // Buttons 0 (left), 1 (middle), 2 (right) are standard navigation buttons
+      const buttonName = MOUSE_BUTTON_NAMES[e.button];
+      if (!buttonName) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const parts: string[] = [];
+
+      if (e.ctrlKey) parts.push('Ctrl');
+      if (e.altKey) parts.push('Alt');
+      if (e.shiftKey) parts.push('Shift');
+      if (e.metaKey) parts.push('Super');
+
+      parts.push(buttonName);
+      onChange(parts.join('+'));
+      setIsRecording(false);
+    },
+    [isRecording, onChange]
+  );
+
   return (
     <div className="flex gap-2">
       <div
-        className={`flex-1 px-3 py-2 border rounded-md flex items-center gap-2 ${
+        ref={inputRef}
+        className={`flex-1 px-3 py-2 border rounded-md flex items-center gap-2 cursor-pointer ${
           isRecording
-            ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800'
-            : 'border-gray-300 dark:border-gray-600'
-        } bg-white dark:bg-gray-700`}
+            ? 'border-indigo-500 ring-2 ring-indigo-200 dark:ring-indigo-800'
+            : 'border-gray-300 dark:border-violet-500/20'
+        } bg-white dark:bg-[#252136]`}
         tabIndex={0}
         onKeyDown={handleKeyDown}
+        onMouseDown={handleMouseDown}
         onFocus={() => setIsRecording(true)}
         onBlur={() => setIsRecording(false)}
       >
         <Keyboard className="w-4 h-4 text-gray-400" />
-        <span className={isRecording ? 'text-blue-600' : ''}>
-          {isRecording ? 'Press shortcut...' : value}
+        <span className={isRecording ? 'text-indigo-600 dark:text-indigo-400' : ''}>
+          {isRecording ? 'Press shortcut or mouse button...' : value}
         </span>
       </div>
       <button
-        onClick={() => setIsRecording(true)}
-        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
+        onMouseDown={(e) => {
+          e.preventDefault(); // Prevent stealing focus from the input
+          startRecording();
+        }}
+        className="px-3 py-2 border border-gray-300 dark:border-violet-500/20 rounded-md hover:bg-gray-50 dark:hover:bg-[#252136] text-sm"
       >
         Change
       </button>

@@ -15,16 +15,16 @@ export function ProviderToggle({ value, onChange }: ProviderToggleProps) {
         onClick={() => onChange('local')}
         className={`flex-1 p-4 border rounded-lg text-left transition-colors ${
           value === 'local'
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+            : 'border-gray-200 dark:border-violet-500/15 hover:border-gray-300 dark:hover:border-violet-500/25'
         }`}
       >
         <div className="flex items-center gap-3 mb-2">
           <div
             className={`p-2 rounded-lg ${
               value === 'local'
-                ? 'bg-blue-100 text-blue-600 dark:bg-blue-800 dark:text-blue-300'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-800 dark:text-indigo-300'
+                : 'bg-gray-100 text-gray-600 dark:bg-[#252136] dark:text-gray-400'
             }`}
           >
             <Cpu className="w-5 h-5" />
@@ -41,16 +41,16 @@ export function ProviderToggle({ value, onChange }: ProviderToggleProps) {
         onClick={() => onChange('groq')}
         className={`flex-1 p-4 border rounded-lg text-left transition-colors ${
           value === 'groq'
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+            : 'border-gray-200 dark:border-violet-500/15 hover:border-gray-300 dark:hover:border-violet-500/25'
         }`}
       >
         <div className="flex items-center gap-3 mb-2">
           <div
             className={`p-2 rounded-lg ${
               value === 'groq'
-                ? 'bg-blue-100 text-blue-600 dark:bg-blue-800 dark:text-blue-300'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-800 dark:text-indigo-300'
+                : 'bg-gray-100 text-gray-600 dark:bg-[#252136] dark:text-gray-400'
             }`}
           >
             <Cloud className="w-5 h-5" />

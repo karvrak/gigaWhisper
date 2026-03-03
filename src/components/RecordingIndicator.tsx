@@ -24,11 +24,11 @@ export function RecordingIndicator({ state }: RecordingIndicatorProps) {
       <div
         className={`w-12 h-12 rounded-full flex items-center justify-center ${
           state.state === 'idle'
-            ? 'bg-gray-100 dark:bg-gray-700 text-gray-500'
+            ? 'bg-gray-100 dark:bg-[#252136] text-gray-500'
             : state.state === 'recording'
             ? 'bg-red-100 dark:bg-red-900/30 text-red-600 animate-pulse'
             : state.state === 'processing'
-            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600'
+            ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600'
             : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600'
         }`}
       >

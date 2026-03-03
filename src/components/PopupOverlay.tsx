@@ -90,13 +90,13 @@ export function PopupOverlay({ onClose }: PopupOverlayProps) {
       {/* Popup */}
       <div
         className={clsx(
-          'modal-content relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full mx-4',
+          'modal-content relative bg-white dark:bg-[#1a1725] rounded-xl shadow-xl max-w-lg w-full mx-4',
           visible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-2'
         )}
         style={{ transition: 'transform 200ms ease, opacity 200ms ease' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/80 dark:border-gray-700/80">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/80 dark:border-violet-500/10">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Transcription Result
           </h3>
@@ -116,7 +116,7 @@ export function PopupOverlay({ onClose }: PopupOverlayProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200/80 dark:border-gray-700/80 bg-gray-50 dark:bg-gray-900/50 rounded-b-xl">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200/80 dark:border-violet-500/10 bg-gray-50 dark:bg-[#0f0d1a]/50 rounded-b-xl">
           <span className="text-xs text-gray-500 dark:text-gray-400">
             Ctrl+C to copy, Esc to close
           </span>
@@ -127,7 +127,7 @@ export function PopupOverlay({ onClose }: PopupOverlayProps) {
               'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150',
               copied
                 ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400'
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
+                : 'bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white'
             )}
           >
             {copied ? (

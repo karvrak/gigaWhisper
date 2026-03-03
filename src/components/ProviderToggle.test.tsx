@@ -20,14 +20,14 @@ describe('ProviderToggle', () => {
     render(<ProviderToggle value="local" onChange={mockOnChange} />);
 
     const localButton = screen.getByText('Local').closest('button');
-    expect(localButton).toHaveClass('border-blue-500');
+    expect(localButton).toHaveClass('border-indigo-500');
   });
 
   it('should highlight groq option when selected', () => {
     render(<ProviderToggle value="groq" onChange={mockOnChange} />);
 
     const groqButton = screen.getByText('Groq Cloud').closest('button');
-    expect(groqButton).toHaveClass('border-blue-500');
+    expect(groqButton).toHaveClass('border-indigo-500');
   });
 
   it('should call onChange with "local" when local is clicked', () => {

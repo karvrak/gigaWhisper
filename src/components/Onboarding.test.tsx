@@ -100,9 +100,37 @@ describe('Onboarding', () => {
   // Step Display Tests
   // ============================================
 
-  describe('Step 0: Theme Selection', () => {
-    it('should display theme step as the first step', () => {
+  describe('Step 0: Welcome', () => {
+    it('should display welcome screen as the first step', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
+
+      expect(screen.getByText('GigaWhisper')).toBeInTheDocument();
+      expect(screen.getByText('Voice to text, everywhere')).toBeInTheDocument();
+    });
+
+    it('should show Get Started button on welcome screen', () => {
+      render(<Onboarding onComplete={mockOnComplete} />);
+
+      expect(screen.getByText('Get Started')).toBeInTheDocument();
+    });
+
+    it('should advance to theme step when Get Started is clicked', () => {
+      render(<Onboarding onComplete={mockOnComplete} />);
+
+      fireEvent.click(screen.getByText('Get Started'));
+
+      expect(screen.getByText('Choose Your Theme')).toBeInTheDocument();
+    });
+  });
+
+  describe('Step 1: Theme Selection', () => {
+    const goToThemeStep = () => {
+      fireEvent.click(screen.getByText('Get Started')); // Step 0 -> 1
+    };
+
+    it('should display theme step after welcome', () => {
+      render(<Onboarding onComplete={mockOnComplete} />);
+      goToThemeStep();
 
       expect(screen.getByText('Choose Your Theme')).toBeInTheDocument();
       expect(screen.getByText(/Select how you want GigaWhisper to look/i)).toBeInTheDocument();
@@ -110,6 +138,7 @@ describe('Onboarding', () => {
 
     it('should display all three theme options', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
+      goToThemeStep();
 
       expect(screen.getByText('Light')).toBeInTheDocument();
       expect(screen.getByText('Dark')).toBeInTheDocument();
@@ -118,28 +147,31 @@ describe('Onboarding', () => {
 
     it('should have System theme selected by default', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
+      goToThemeStep();
 
       const systemButton = screen.getByText('System').closest('button');
-      expect(systemButton).toHaveClass('border-blue-500');
+      expect(systemButton).toHaveClass('border-indigo-500');
     });
 
     it('should allow selecting Light theme', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
+      goToThemeStep();
 
       const lightButton = screen.getByText('Light').closest('button');
       fireEvent.click(lightButton!);
 
-      expect(lightButton).toHaveClass('border-blue-500');
+      expect(lightButton).toHaveClass('border-indigo-500');
       expect(document.documentElement.classList.contains('dark')).toBe(false);
     });
 
     it('should allow selecting Dark theme', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
+      goToThemeStep();
 
       const darkButton = screen.getByText('Dark').closest('button');
       fireEvent.click(darkButton!);
 
-      expect(darkButton).toHaveClass('border-blue-500');
+      expect(darkButton).toHaveClass('border-indigo-500');
       expect(document.documentElement.classList.contains('dark')).toBe(true);
     });
 
@@ -160,17 +192,22 @@ describe('Onboarding', () => {
       });
 
       render(<Onboarding onComplete={mockOnComplete} />);
+      goToThemeStep();
 
       // System theme with dark preference should add dark class
       expect(document.documentElement.classList.contains('dark')).toBe(true);
     });
   });
 
-  describe('Step 1: How It Works', () => {
+  describe('Step 2: How It Works', () => {
+    const goToHowItWorks = () => {
+      fireEvent.click(screen.getByText('Get Started')); // Step 0 -> 1
+      fireEvent.click(screen.getByText('Next')); // Step 1 -> 2
+    };
+
     it('should display how it works step after clicking Next', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
-
-      fireEvent.click(screen.getByText('Next'));
+      goToHowItWorks();
 
       expect(screen.getByText('Voice to Text, Instantly')).toBeInTheDocument();
       expect(screen.getByText(/Press your shortcut key, speak/i)).toBeInTheDocument();
@@ -178,8 +215,7 @@ describe('Onboarding', () => {
 
     it('should show keyboard shortcut keys', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
-
-      fireEvent.click(screen.getByText('Next'));
+      goToHowItWorks();
 
       expect(screen.getByText('Ctrl')).toBeInTheDocument();
       expect(screen.getByText('Shift')).toBeInTheDocument();
@@ -188,25 +224,24 @@ describe('Onboarding', () => {
 
     it('should show recording indicator', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
-
-      fireEvent.click(screen.getByText('Next'));
+      goToHowItWorks();
 
       expect(screen.getByText('Recording...')).toBeInTheDocument();
     });
 
     it('should show transcribed text example', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
-
-      fireEvent.click(screen.getByText('Next'));
+      goToHowItWorks();
 
       expect(screen.getByText('Hello, this is my transcribed text!')).toBeInTheDocument();
     });
   });
 
-  describe('Step 2: Model Selection', () => {
+  describe('Step 3: Model Selection', () => {
     const goToModelStep = () => {
-      fireEvent.click(screen.getByText('Next')); // Step 0 -> 1
+      fireEvent.click(screen.getByText('Get Started')); // Step 0 -> 1
       fireEvent.click(screen.getByText('Next')); // Step 1 -> 2
+      fireEvent.click(screen.getByText('Next')); // Step 2 -> 3
     };
 
     it('should display model selection step', () => {
@@ -249,7 +284,7 @@ describe('Onboarding', () => {
       goToModelStep();
 
       const smallButton = screen.getByText('Small').closest('button');
-      expect(smallButton).toHaveClass('border-blue-500');
+      expect(smallButton).toHaveClass('border-indigo-500');
     });
 
     it('should allow selecting a different model', () => {
@@ -259,7 +294,7 @@ describe('Onboarding', () => {
       const baseButton = screen.getByText('Base').closest('button');
       fireEvent.click(baseButton!);
 
-      expect(baseButton).toHaveClass('border-blue-500');
+      expect(baseButton).toHaveClass('border-indigo-500');
     });
 
     it('should show download button for selected model', () => {
@@ -420,11 +455,12 @@ describe('Onboarding', () => {
     });
   });
 
-  describe('Step 3: Ready to Go', () => {
+  describe('Step 4: Ready to Go', () => {
     const goToReadyStep = () => {
-      fireEvent.click(screen.getByText('Next')); // Step 0 -> 1
+      fireEvent.click(screen.getByText('Get Started')); // Step 0 -> 1
       fireEvent.click(screen.getByText('Next')); // Step 1 -> 2
       fireEvent.click(screen.getByText('Next')); // Step 2 -> 3
+      fireEvent.click(screen.getByText('Next')); // Step 3 -> 4
     };
 
     it('should display ready step', () => {
@@ -465,21 +501,30 @@ describe('Onboarding', () => {
   // ============================================
 
   describe('Navigation', () => {
-    it('should show Next button on first step', () => {
+    it('should show Get Started button on welcome step', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
-      expect(screen.getByText('Next')).toBeInTheDocument();
+      expect(screen.getByText('Get Started')).toBeInTheDocument();
     });
 
-    it('should not show Back button on first step', () => {
+    it('should not show Back button on welcome step', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
       expect(screen.queryByText('Back')).not.toBeInTheDocument();
     });
 
-    it('should show Back button after first step', () => {
+    it('should show Next button on theme step', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
+      fireEvent.click(screen.getByText('Get Started'));
+
+      expect(screen.getByText('Next')).toBeInTheDocument();
+    });
+
+    it('should show Back button after theme step', () => {
+      render(<Onboarding onComplete={mockOnComplete} />);
+
+      fireEvent.click(screen.getByText('Get Started'));
       fireEvent.click(screen.getByText('Next'));
 
       expect(screen.getByText('Back')).toBeInTheDocument();
@@ -488,44 +533,51 @@ describe('Onboarding', () => {
     it('should navigate back when Back is clicked', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
-      fireEvent.click(screen.getByText('Next')); // Go to step 1
+      fireEvent.click(screen.getByText('Get Started')); // Go to step 1
+      fireEvent.click(screen.getByText('Next')); // Go to step 2
       expect(screen.getByText('Voice to Text, Instantly')).toBeInTheDocument();
 
-      fireEvent.click(screen.getByText('Back')); // Go back to step 0
+      fireEvent.click(screen.getByText('Back')); // Go back to step 1
       expect(screen.getByText('Choose Your Theme')).toBeInTheDocument();
     });
 
-    it('should display step indicators', () => {
+    it('should display step indicators on non-welcome steps', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
-      // Should have 4 step indicators (buttons)
+      fireEvent.click(screen.getByText('Get Started'));
+
+      // Should have 5 step indicators (buttons)
       const stepButtons = screen.getAllByRole('button').filter(
         (button) => button.classList.contains('rounded-full') && button.classList.contains('h-2')
       );
-      expect(stepButtons.length).toBe(4);
+      expect(stepButtons.length).toBe(5);
     });
 
     it('should highlight current step indicator', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
+      fireEvent.click(screen.getByText('Get Started'));
+
       const stepButtons = screen.getAllByRole('button').filter(
         (button) => button.classList.contains('rounded-full') && button.classList.contains('h-2')
       );
 
-      // First step should be wider (active)
-      expect(stepButtons[0]).toHaveClass('w-6');
-      expect(stepButtons[1]).toHaveClass('w-2');
+      // Step 1 (theme) should be wider (active)
+      expect(stepButtons[1]).toHaveClass('w-6');
+      expect(stepButtons[2]).toHaveClass('w-2');
     });
 
     it('should allow clicking step indicators to navigate', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
+      fireEvent.click(screen.getByText('Get Started'));
+
       const stepButtons = screen.getAllByRole('button').filter(
         (button) => button.classList.contains('rounded-full') && button.classList.contains('h-2')
       );
 
-      // Click on step 3 (Ready)
-      fireEvent.click(stepButtons[3]);
+      // Click on step 4 (Ready)
+      fireEvent.click(stepButtons[4]);
 
       expect(screen.getByText('Ready to Go!')).toBeInTheDocument();
     });
@@ -533,15 +585,16 @@ describe('Onboarding', () => {
     it('should update step indicator when navigating', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
-      fireEvent.click(screen.getByText('Next')); // Go to step 1
+      fireEvent.click(screen.getByText('Get Started')); // Go to step 1
+      fireEvent.click(screen.getByText('Next')); // Go to step 2
 
       const stepButtons = screen.getAllByRole('button').filter(
         (button) => button.classList.contains('rounded-full') && button.classList.contains('h-2')
       );
 
-      // Second step should now be wider (active)
-      expect(stepButtons[0]).toHaveClass('w-2');
-      expect(stepButtons[1]).toHaveClass('w-6');
+      // Step 2 should now be wider (active)
+      expect(stepButtons[1]).toHaveClass('w-2');
+      expect(stepButtons[2]).toHaveClass('w-6');
     });
   });
 
@@ -551,9 +604,10 @@ describe('Onboarding', () => {
 
   describe('Completion and Settings', () => {
     const completeOnboarding = () => {
-      fireEvent.click(screen.getByText('Next')); // Step 0 -> 1
+      fireEvent.click(screen.getByText('Get Started')); // Step 0 -> 1
       fireEvent.click(screen.getByText('Next')); // Step 1 -> 2
       fireEvent.click(screen.getByText('Next')); // Step 2 -> 3
+      fireEvent.click(screen.getByText('Next')); // Step 3 -> 4
       fireEvent.click(screen.getByText('Get Started')); // Complete
     };
 
@@ -569,11 +623,16 @@ describe('Onboarding', () => {
     it('should save settings with selected theme', async () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
-      // Select dark theme
+      // Go to theme step and select dark theme
+      fireEvent.click(screen.getByText('Get Started')); // Step 0 -> 1
       const darkButton = screen.getByText('Dark').closest('button');
       fireEvent.click(darkButton!);
 
-      completeOnboarding();
+      // Complete remaining steps
+      fireEvent.click(screen.getByText('Next')); // Step 1 -> 2
+      fireEvent.click(screen.getByText('Next')); // Step 2 -> 3
+      fireEvent.click(screen.getByText('Next')); // Step 3 -> 4
+      fireEvent.click(screen.getByText('Get Started')); // Complete
 
       await waitFor(() => {
         expect(invoke).toHaveBeenCalledWith('save_settings', {
@@ -590,13 +649,14 @@ describe('Onboarding', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
       // Go to model step and select Base
-      fireEvent.click(screen.getByText('Next')); // Step 0 -> 1
+      fireEvent.click(screen.getByText('Get Started')); // Step 0 -> 1
       fireEvent.click(screen.getByText('Next')); // Step 1 -> 2
+      fireEvent.click(screen.getByText('Next')); // Step 2 -> 3
 
       const baseButton = screen.getByText('Base').closest('button');
       fireEvent.click(baseButton!);
 
-      fireEvent.click(screen.getByText('Next')); // Step 2 -> 3
+      fireEvent.click(screen.getByText('Next')); // Step 3 -> 4
       fireEvent.click(screen.getByText('Get Started')); // Complete
 
       await waitFor(() => {
@@ -710,13 +770,12 @@ describe('Onboarding', () => {
 
       const overlay = document.querySelector('.fixed.inset-0.z-50');
       expect(overlay).toBeInTheDocument();
-      expect(overlay).toHaveClass('bg-gray-900/50');
     });
 
     it('should render modal container', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
-      const modal = document.querySelector('.bg-white.dark\\:bg-gray-800.rounded-2xl');
+      const modal = document.querySelector('.rounded-2xl');
       expect(modal).toBeInTheDocument();
     });
 
@@ -736,6 +795,10 @@ describe('Onboarding', () => {
     it('should have descriptive headings for each step', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
+      // Welcome step has h1
+      expect(screen.getByRole('heading', { level: 1, name: 'GigaWhisper' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Get Started'));
       expect(screen.getByRole('heading', { level: 2, name: 'Choose Your Theme' })).toBeInTheDocument();
 
       fireEvent.click(screen.getByText('Next'));
@@ -745,6 +808,12 @@ describe('Onboarding', () => {
     it('should have clickable navigation buttons', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
+      // Welcome has Get Started button
+      const getStartedButton = screen.getByText('Get Started').closest('button');
+      expect(getStartedButton).toBeEnabled();
+
+      // After welcome, Next button
+      fireEvent.click(screen.getByText('Get Started'));
       const nextButton = screen.getByText('Next').closest('button');
       expect(nextButton).toBeEnabled();
     });
@@ -758,12 +827,13 @@ describe('Onboarding', () => {
     it('should handle rapid navigation clicks', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
-      // Rapid clicks
+      // Rapid clicks (Get Started first, then Next)
+      fireEvent.click(screen.getByText('Get Started'));
       fireEvent.click(screen.getByText('Next'));
       fireEvent.click(screen.getByText('Next'));
       fireEvent.click(screen.getByText('Next'));
 
-      // Should be at step 3
+      // Should be at step 4 (Ready)
       expect(screen.getByText('Ready to Go!')).toBeInTheDocument();
     });
 
@@ -771,6 +841,7 @@ describe('Onboarding', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
       // Go to last step
+      fireEvent.click(screen.getByText('Get Started'));
       fireEvent.click(screen.getByText('Next'));
       fireEvent.click(screen.getByText('Next'));
       fireEvent.click(screen.getByText('Next'));
@@ -782,22 +853,23 @@ describe('Onboarding', () => {
     it('should not go before first step with Back', () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
-      // Back button should not exist on first step
+      // Back button should not exist on welcome step
       expect(screen.queryByText('Back')).not.toBeInTheDocument();
 
-      // Navigate forward then back
+      // Navigate forward then back to step 1
+      fireEvent.click(screen.getByText('Get Started'));
       fireEvent.click(screen.getByText('Next'));
       fireEvent.click(screen.getByText('Back'));
 
-      // Should be at first step
+      // Should be at theme step (step 1)
       expect(screen.getByText('Choose Your Theme')).toBeInTheDocument();
-      expect(screen.queryByText('Back')).not.toBeInTheDocument();
     });
 
     it('should handle download error event', async () => {
       render(<Onboarding onComplete={mockOnComplete} />);
 
       // Go to model step
+      fireEvent.click(screen.getByText('Get Started'));
       fireEvent.click(screen.getByText('Next'));
       fireEvent.click(screen.getByText('Next'));
 

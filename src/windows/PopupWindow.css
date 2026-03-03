@@ -49,11 +49,11 @@
 
 /* Dark mode */
 .dark .popup-window {
-  background: #1f2937;
+  background: #1a1725;
   box-shadow:
     0 20px 25px -5px rgba(0, 0, 0, 0.4),
     0 8px 10px -6px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
+    0 0 0 1px rgba(139, 92, 246, 0.1);
 }
 
 /* Header */
@@ -66,7 +66,7 @@
 }
 
 .dark .popup-header {
-  border-bottom-color: #374151;
+  border-bottom-color: rgba(139, 92, 246, 0.1);
 }
 
 .popup-title {
@@ -101,7 +101,7 @@
 }
 
 .dark .popup-close-btn:hover {
-  background: #374151;
+  background: #252136;
   color: #e5e7eb;
 }
 
@@ -166,8 +166,8 @@
 }
 
 .dark .popup-footer {
-  border-top-color: #374151;
-  background: #111827;
+  border-top-color: rgba(139, 92, 246, 0.1);
+  background: #0f0d1a;
 }
 
 /* Copy button */
@@ -179,7 +179,7 @@
   font-size: 13px;
   font-weight: 500;
   color: white;
-  background: #3b82f6;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -188,7 +188,7 @@
 }
 
 .popup-copy-btn:hover {
-  background: #2563eb;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
   transform: translateY(-1px);
 }
 

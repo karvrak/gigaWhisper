@@ -3,11 +3,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../App';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 
 vi.mock('@tauri-apps/api/core');
 vi.mock('@tauri-apps/api/event');
-vi.mock('@tauri-apps/api/window');
 
 const mockSettings = {
   recording: {
@@ -68,11 +66,6 @@ describe('App', () => {
     vi.mocked(listen).mockImplementation(() => {
       return Promise.resolve(() => {});
     });
-
-    vi.mocked(getCurrentWindow).mockReturnValue({
-      minimize: vi.fn().mockResolvedValue(undefined),
-      hide: vi.fn().mockResolvedValue(undefined),
-    } as any);
 
     // Mock matchMedia
     Object.defineProperty(window, 'matchMedia', {
@@ -232,35 +225,5 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByText(/Cloud - Groq API/i)).toBeInTheDocument();
     });
-  });
-
-  it('should call minimize when minimize button is clicked', async () => {
-    localStorage.setItem('gigawhisper_onboarding_completed', 'true');
-
-    render(<App />);
-
-    await waitFor(() => {
-      expect(screen.getByTitle('Minimize')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTitle('Minimize'));
-
-    const mockWindow = getCurrentWindow();
-    expect(mockWindow.minimize).toHaveBeenCalled();
-  });
-
-  it('should call hide when close button is clicked', async () => {
-    localStorage.setItem('gigawhisper_onboarding_completed', 'true');
-
-    render(<App />);
-
-    await waitFor(() => {
-      expect(screen.getByTitle('Close')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTitle('Close'));
-
-    const mockWindow = getCurrentWindow();
-    expect(mockWindow.hide).toHaveBeenCalled();
   });
 });

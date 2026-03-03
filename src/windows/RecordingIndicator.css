@@ -1,6 +1,7 @@
 /* ============================================
    RECORDING INDICATOR WINDOW
    Floating overlay for recording/processing state
+   Indigo/Violet theme
    ============================================ */
 
 /* Reset and transparency */
@@ -27,15 +28,34 @@ html, body, #root {
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
-  background: rgba(24, 24, 27, 0.92);
+  background: rgba(15, 13, 26, 0.92);
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.15);
   box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.2),
-    0 2px 4px -2px rgba(0, 0, 0, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -2px rgba(0, 0, 0, 0.2),
+    0 0 20px rgba(99, 102, 241, 0.08),
+    0 0 0 1px rgba(139, 92, 246, 0.05) inset;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  animation: breathing-glow 3s ease-in-out infinite;
+}
+
+@keyframes breathing-glow {
+  0%, 100% {
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 2px 4px -2px rgba(0, 0, 0, 0.2),
+      0 0 20px rgba(99, 102, 241, 0.08),
+      0 0 0 1px rgba(139, 92, 246, 0.05) inset;
+  }
+  50% {
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 2px 4px -2px rgba(0, 0, 0, 0.2),
+      0 0 30px rgba(99, 102, 241, 0.15),
+      0 0 0 1px rgba(139, 92, 246, 0.1) inset;
+  }
 }
 
 /* ============================================
@@ -94,7 +114,7 @@ html, body, #root {
 .waveform-bar {
   width: 3px;
   min-height: 6px;
-  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+  background: linear-gradient(180deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
   border-radius: 2px;
   animation: wave 0.6s ease-in-out infinite;
   will-change: height;
@@ -136,7 +156,7 @@ html, body, #root {
 }
 
 /* ============================================
-   PROCESSING STATE (Green theme)
+   PROCESSING STATE (Green theme with subtle glow)
    ============================================ */
 
 .processing-dot-container {
@@ -154,7 +174,7 @@ html, body, #root {
   position: absolute;
   top: 0;
   left: 0;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5), 0 0 16px rgba(34, 197, 94, 0.2);
 }
 
 .processing-dot-pulse {
@@ -179,11 +199,12 @@ html, body, #root {
   }
 }
 
-/* Processing waveform - green bars with flowing animation */
+/* Processing waveform - green bars with flowing animation and glow */
 .processing-waveform .waveform-bar,
 .processing-waveform .processing-bar {
   background: linear-gradient(180deg, #22c55e 0%, #4ade80 100%);
   animation: processing-wave 1s ease-in-out infinite;
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.3);
 }
 
 @keyframes processing-wave {
@@ -206,11 +227,11 @@ html, body, #root {
   letter-spacing: 0.01em;
 }
 
-/* Processing spinner (if used) */
+/* Processing spinner */
 .processing-spinner {
   width: 18px;
   height: 18px;
-  color: #60a5fa;
+  color: #818cf8;
   animation: spin 1s linear infinite;
 }
 
@@ -227,6 +248,10 @@ html, body, #root {
    REDUCED MOTION SUPPORT
    ============================================ */
 @media (prefers-reduced-motion: reduce) {
+  .recording-indicator {
+    animation: none;
+  }
+
   .recording-dot-pulse,
   .processing-dot-pulse {
     animation: none;

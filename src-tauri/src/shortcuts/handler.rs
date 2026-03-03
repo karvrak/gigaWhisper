@@ -11,24 +11,31 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 pub fn register_shortcuts(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let state = app.state::<AppState>();
     let config = state.config.read();
+    let shortcut_str = &config.shortcuts.record;
 
-    // Parse shortcut from config
-    let record_shortcut: Shortcut = config.shortcuts.record.parse().map_err(|e| {
-        tracing::error!("Failed to parse shortcut '{}': {}", config.shortcuts.record, e);
-        e
-    })?;
-
-    // Register the shortcut
-    app.global_shortcut()
-        .on_shortcut(record_shortcut, move |app, shortcut, event| {
-            handle_record_shortcut(app, shortcut, event.state);
-        })
-        .map_err(|e| {
-            tracing::error!("Failed to register shortcut {:?}: {}", record_shortcut, e);
+    if super::mouse_hook::is_mouse_shortcut(shortcut_str) {
+        // Use low-level mouse hook for mouse button shortcuts
+        super::mouse_hook::install(shortcut_str, app.handle().clone())?;
+        tracing::info!("Mouse button shortcut registered: {}", shortcut_str);
+    } else {
+        // Use standard global shortcut for keyboard shortcuts
+        let record_shortcut: Shortcut = shortcut_str.parse().map_err(|e| {
+            tracing::error!("Failed to parse shortcut '{}': {}", shortcut_str, e);
             e
         })?;
 
-    tracing::info!("Global shortcut registered: {:?}", record_shortcut);
+        app.global_shortcut()
+            .on_shortcut(record_shortcut, move |app, shortcut, event| {
+                handle_record_shortcut(app, shortcut, event.state);
+            })
+            .map_err(|e| {
+                tracing::error!("Failed to register shortcut {:?}: {}", record_shortcut, e);
+                e
+            })?;
+
+        tracing::info!("Global shortcut registered: {:?}", record_shortcut);
+    }
+
     Ok(())
 }
 
@@ -112,9 +119,10 @@ fn handle_toggle(app: &AppHandle, event: ShortcutState) {
     }
 }
 
-/// Unregister all shortcuts
+/// Unregister all shortcuts (keyboard and mouse)
 pub fn unregister_shortcuts(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     app.global_shortcut().unregister_all()?;
+    super::mouse_hook::uninstall();
     tracing::info!("Global shortcuts unregistered");
     Ok(())
 }
@@ -125,17 +133,89 @@ pub fn update_shortcuts(app: &AppHandle) -> Result<(), Box<dyn std::error::Error
 
     let state = app.state::<AppState>();
     let config = state.config.read();
+    let shortcut_str = &config.shortcuts.record;
 
-    let record_shortcut: Shortcut = config.shortcuts.record.parse()?;
+    if super::mouse_hook::is_mouse_shortcut(shortcut_str) {
+        super::mouse_hook::install(shortcut_str, app.clone())?;
+    } else {
+        let record_shortcut: Shortcut = shortcut_str.parse()?;
 
-    let app_clone = app.clone();
-    app.global_shortcut()
-        .on_shortcut(record_shortcut, move |_app, shortcut, event| {
-            handle_record_shortcut(&app_clone, shortcut, event.state);
-        })?;
+        let app_clone = app.clone();
+        app.global_shortcut()
+            .on_shortcut(record_shortcut, move |_app, shortcut, event| {
+                handle_record_shortcut(&app_clone, shortcut, event.state);
+            })?;
+    }
 
     tracing::info!("Global shortcuts updated");
     Ok(())
+}
+
+/// Handle a mouse button event (called from mouse_hook module)
+pub fn handle_mouse_event(app: &AppHandle, is_pressed: bool) {
+    let state = app.state::<AppState>();
+    let mode = {
+        let config = state.config.read();
+        config.recording.mode.clone()
+    };
+
+    match mode {
+        crate::config::RecordingMode::PushToTalk => {
+            let app_clone = app.clone();
+            if is_pressed {
+                tracing::debug!("Mouse PTT: Button pressed, starting recording");
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = start_recording_internal(&app_clone).await {
+                        tracing::error!("Failed to start recording: {}", e);
+                    }
+                });
+            } else {
+                tracing::debug!("Mouse PTT: Button released, stopping recording");
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = stop_recording_internal(&app_clone).await {
+                        tracing::error!("Failed to stop recording: {}", e);
+                    }
+                });
+            }
+        }
+        crate::config::RecordingMode::Toggle => {
+            if !is_pressed {
+                return;
+            }
+
+            let should_start = {
+                let recording_state = state.recording_state.read();
+                match &*recording_state {
+                    RecordingState::Idle | RecordingState::Error(_) => Some(true),
+                    RecordingState::Recording { .. } => Some(false),
+                    RecordingState::Processing => None,
+                }
+            };
+
+            let app_clone = app.clone();
+            match should_start {
+                Some(true) => {
+                    tracing::debug!("Mouse Toggle: Starting recording");
+                    tauri::async_runtime::spawn(async move {
+                        if let Err(e) = start_recording_internal(&app_clone).await {
+                            tracing::error!("Failed to start recording: {}", e);
+                        }
+                    });
+                }
+                Some(false) => {
+                    tracing::debug!("Mouse Toggle: Stopping recording");
+                    tauri::async_runtime::spawn(async move {
+                        if let Err(e) = stop_recording_internal(&app_clone).await {
+                            tracing::error!("Failed to stop recording: {}", e);
+                        }
+                    });
+                }
+                None => {
+                    tracing::debug!("Mouse Toggle: Ignored, currently processing");
+                }
+            }
+        }
+    }
 }
 
 /// Internal function to start recording

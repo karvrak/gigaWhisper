@@ -145,8 +145,8 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
             tabIndex={model.downloaded ? 0 : -1}
             className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
               value === model.model
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                : 'border-gray-200 dark:border-violet-500/15 hover:border-gray-300 dark:hover:border-violet-500/25'
             } ${!model.downloaded && !isDownloading ? 'opacity-75' : ''}`}
             onClick={() => model.downloaded && onChange(model.model)}
             onKeyDown={(e) => {
@@ -161,8 +161,8 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
               <div
                 className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                   value === model.model
-                    ? 'border-blue-500 bg-blue-500'
-                    : 'border-gray-300 dark:border-gray-600'
+                    ? 'border-indigo-500 bg-indigo-500'
+                    : 'border-gray-300 dark:border-violet-500/20'
                 }`}
               >
                 {value === model.model && <Check className="w-3 h-3 text-white" />}
@@ -186,9 +186,9 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
                       <span>{currentProgress.percentage.toFixed(1)}%</span>
                       <span>{formatSpeed(currentProgress.speed_bps)}</span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                    <div className="w-full bg-gray-200 dark:bg-[#252136] rounded-full h-1.5">
                       <div
-                        className="bg-blue-500 h-1.5 rounded-full transition-all"
+                        className="bg-gradient-to-r from-indigo-500 to-violet-500 h-1.5 rounded-full transition-all"
                         style={{ width: `${currentProgress.percentage}%` }}
                       />
                     </div>
@@ -201,7 +201,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
             <div className="flex items-center gap-2 ml-2 flex-shrink-0">
               {isDownloading ? (
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400">
+                  <span className="flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
                   </span>
                   <button
@@ -238,7 +238,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
                     e.stopPropagation();
                     handleDownload(model.model);
                   }}
-                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                  className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
                 >
                   <Download className="w-4 h-4" />
                   Download
