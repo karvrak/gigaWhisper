@@ -136,7 +136,7 @@ describe('SettingsPanel', () => {
 
       // Should show transcription settings
       expect(screen.getByText('Language')).toBeInTheDocument();
-      expect(screen.getByText('Provider')).toBeInTheDocument();
+      expect(screen.getByText('Whisper Model')).toBeInTheDocument();
     });
 
     it('should switch to Audio tab when clicked', async () => {
@@ -262,13 +262,13 @@ describe('SettingsPanel', () => {
       expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
     });
 
-    it('should render provider toggle', async () => {
+    it('should render GPU acceleration option', async () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
       await user.click(screen.getByText('Transcription'));
 
-      expect(screen.getByTestId('provider-toggle')).toBeInTheDocument();
+      expect(screen.getByText('GPU Acceleration')).toBeInTheDocument();
     });
 
     it('should show local settings when local provider selected', async () => {

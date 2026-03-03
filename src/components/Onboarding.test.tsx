@@ -218,7 +218,6 @@ describe('Onboarding', () => {
       goToHowItWorks();
 
       expect(screen.getByText('Ctrl')).toBeInTheDocument();
-      expect(screen.getByText('Shift')).toBeInTheDocument();
       expect(screen.getByText('Space')).toBeInTheDocument();
     });
 

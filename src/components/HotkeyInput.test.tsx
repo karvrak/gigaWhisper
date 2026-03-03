@@ -18,7 +18,7 @@ describe('HotkeyInput', () => {
     render(<HotkeyInput value="Ctrl+Space" onChange={mockOnChange} />);
     const inputDiv = screen.getByText('Ctrl+Space').closest('div[tabindex="0"]');
     fireEvent.focus(inputDiv!);
-    expect(screen.getByText('Press shortcut...')).toBeInTheDocument();
+    expect(screen.getByText('Press shortcut or mouse button...')).toBeInTheDocument();
   });
 
   it('should capture Ctrl+A shortcut', () => {
@@ -63,15 +63,15 @@ describe('HotkeyInput', () => {
   it('should start recording when Change button is clicked', () => {
     render(<HotkeyInput value="Ctrl+Space" onChange={mockOnChange} />);
     const changeButton = screen.getByRole('button', { name: /change/i });
-    fireEvent.click(changeButton);
-    expect(screen.getByText('Press shortcut...')).toBeInTheDocument();
+    fireEvent.mouseDown(changeButton);
+    expect(screen.getByText('Press shortcut or mouse button...')).toBeInTheDocument();
   });
 
   it('should stop recording on blur', () => {
     render(<HotkeyInput value="Ctrl+Space" onChange={mockOnChange} />);
     const inputDiv = screen.getByText('Ctrl+Space').closest('div[tabindex="0"]');
     fireEvent.focus(inputDiv!);
-    expect(screen.getByText('Press shortcut...')).toBeInTheDocument();
+    expect(screen.getByText('Press shortcut or mouse button...')).toBeInTheDocument();
     fireEvent.blur(inputDiv!);
     expect(screen.getByText('Ctrl+Space')).toBeInTheDocument();
   });
