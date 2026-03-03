@@ -30,17 +30,66 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
+      - name: Extract release notes from CHANGELOG
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          # Extract the section for this version from CHANGELOG.md
+          # Matches from "## [X.Y.Z]" until the next "## [" or end of file
+          NOTES=$(awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "[" ver "]")) found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md)
+
+          if [ -z "$NOTES" ]; then
+            NOTES="No changelog entry found for v${VERSION}."
+          fi
+
+          # Write to file to preserve multiline content
+          echo "$NOTES" > /tmp/release_notes.md
+          echo "notes_file=/tmp/release_notes.md" >> $GITHUB_OUTPUT
+
       - name: Create Release
         id: create_release
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
+            const notesFile = '${{ steps.changelog.outputs.notes_file }}';
+            const changelogNotes = fs.readFileSync(notesFile, 'utf8').trim();
+            const version = '${{ steps.get_version.outputs.VERSION }}';
+
+            const body = `${changelogNotes}
+
+            ---
+
+            ## Installation
+
+            Download the installer for your system:
+
+            | Variant | Description | Download |
+            |---------|-------------|----------|
+            | **CPU** | Works on all systems | \`GigaWhisper_${version}_x64-cpu-setup.exe\` |
+            | **Vulkan** | GPU acceleration (AMD/Intel/NVIDIA) | \`GigaWhisper_${version}_x64-vulkan-setup.exe\` |
+            | **CUDA** | Best for NVIDIA GPUs | \`GigaWhisper_${version}_x64-cuda-setup.exe\` |
+
+            ## Auto-Update
+
+            If you already have GigaWhisper installed, you'll be prompted to update automatically (same variant).
+
+            ---
+            *Full changelog: [CHANGELOG.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CHANGELOG.md)*`;
+
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${{ steps.get_version.outputs.VERSION }}`,
-              name: `GigaWhisper v${{ steps.get_version.outputs.VERSION }}`,
-              body: `## What's Changed\n\nSee the [full changelog](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/v${{ steps.get_version.outputs.VERSION }}...HEAD)\n\n## Installation\n\nDownload the installer for your system:\n\n| Variant | Description | Download |\n|---------|-------------|----------|\n| **CPU** | Works on all systems | \`GigaWhisper_${{ steps.get_version.outputs.VERSION }}_x64-cpu-setup.exe\` |\n| **Vulkan** | GPU acceleration (AMD/Intel/NVIDIA) | \`GigaWhisper_${{ steps.get_version.outputs.VERSION }}_x64-vulkan-setup.exe\` |\n| **CUDA** | Best for NVIDIA GPUs | \`GigaWhisper_${{ steps.get_version.outputs.VERSION }}_x64-cuda-setup.exe\` |\n\n## Auto-Update\n\nIf you already have GigaWhisper installed, you'll be prompted to update automatically (same variant).`,
+              tag_name: `v${version}`,
+              name: `GigaWhisper v${version}`,
+              body: body,
               draft: true,
               prerelease: false
             })

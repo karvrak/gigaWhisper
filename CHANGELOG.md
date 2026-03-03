@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Applied rustfmt formatting to all Rust source files
+- Updated tests to match component changes for v1.0.5
+
+## [1.0.5] - 2025-03-01
+
+### Added
+- Mouse button shortcuts support (Mouse4/Mouse5) via Windows low-level hook
+- HotkeyInput component now captures mouse buttons in addition to keyboard shortcuts
+- Welcome screen in onboarding wizard with branded UI
+
+### Changed
+- Refactored UI styles with new indigo/violet color palette
+- Simplified Tailwind configuration
+- Redesigned SettingsPanel layout
+- Improved Onboarding flow (5 steps instead of 4)
+- Updated ProviderToggle and ModelSelector components
+
+### Fixed
+- Updated tests for Onboarding and ProviderToggle components
+
+## [1.0.4] - 2025-03-01
+
+### Fixed
+- Updated pnpm-lock.yaml and removed stale package-lock.json
+- Resolved Clippy warnings across Rust codebase
+
+### Changed
+- Added ESLint 9 flat config (`eslint.config.js`)
+
 ## [1.0.3] - 2025-01-27
 
 ### Added
@@ -73,3 +103,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Voice Activity Detection (VAD)
 - Onboarding wizard for first-time setup
 - Dark/Light theme support
+
+## [0.3.0] - 2025-01-18
+
+### Added
+- Variant-aware auto-update system (CPU/Vulkan/CUDA)
+- Auto-update system using tauri-plugin-updater
+- GPU acceleration support (Vulkan/CUDA)
+
+### Fixed
+- CUDA compilation fixes and performance optimizations
+- Force x86-64-v2 CPU target for compatibility
+- CUDA build fixes (cublas packages, visual_studio_integration)
+
+[Unreleased]: https://github.com/karvrak/gigaWhisper/compare/v1.0.5...HEAD
+[1.0.5]: https://github.com/karvrak/gigaWhisper/compare/v1.0.4...v1.0.5
+[1.0.4]: https://github.com/karvrak/gigaWhisper/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/karvrak/gigaWhisper/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/karvrak/gigaWhisper/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/karvrak/gigaWhisper/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/karvrak/gigaWhisper/compare/v0.3.0...v1.0.0
+[0.3.0]: https://github.com/karvrak/gigaWhisper/releases/tag/v0.3.0

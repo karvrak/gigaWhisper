@@ -5,7 +5,7 @@ description = "Open-source voice transcription app for Windows"
 authors = ["GigaWhisper Contributors"]
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/yourusername/gigawhisper"
+repository = "https://github.com/karvrak/gigaWhisper"
 
 [lib]
 name = "gigawhisper_lib"
