@@ -27,7 +27,8 @@ impl AnthropicLlm {
 #[async_trait]
 impl LlmProvider for AnthropicLlm {
     async fn complete(&self, request: &LlmRequest) -> Result<LlmResponse, LlmError> {
-        let api_key = self.get_api_key()
+        let api_key = self
+            .get_api_key()
             .ok_or_else(|| LlmError::ApiError("Anthropic API key not configured".to_string()))?;
 
         let body = serde_json::json!({
@@ -39,7 +40,8 @@ impl LlmProvider for AnthropicLlm {
             ]
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(ANTHROPIC_API_URL)
             .header("x-api-key", &api_key)
             .header("anthropic-version", "2023-06-01")
@@ -54,7 +56,9 @@ impl LlmProvider for AnthropicLlm {
             return Err(LlmError::ApiError(error_text));
         }
 
-        let result: serde_json::Value = response.json().await
+        let result: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| LlmError::Failed(e.to_string()))?;
 
         let text = result["content"][0]["text"]

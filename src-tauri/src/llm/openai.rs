@@ -27,7 +27,8 @@ impl OpenAiLlm {
 #[async_trait]
 impl LlmProvider for OpenAiLlm {
     async fn complete(&self, request: &LlmRequest) -> Result<LlmResponse, LlmError> {
-        let api_key = self.get_api_key()
+        let api_key = self
+            .get_api_key()
             .ok_or_else(|| LlmError::ApiError("OpenAI API key not configured".to_string()))?;
 
         let body = serde_json::json!({
@@ -40,7 +41,8 @@ impl LlmProvider for OpenAiLlm {
             "temperature": 0.3
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(OPENAI_CHAT_URL)
             .bearer_auth(&api_key)
             .json(&body)
@@ -53,7 +55,9 @@ impl LlmProvider for OpenAiLlm {
             return Err(LlmError::ApiError(error_text));
         }
 
-        let result: serde_json::Value = response.json().await
+        let result: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| LlmError::Failed(e.to_string()))?;
 
         let text = result["choices"][0]["message"]["content"]

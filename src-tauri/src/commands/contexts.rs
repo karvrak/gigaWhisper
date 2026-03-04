@@ -28,7 +28,12 @@ pub async fn save_context(
     }
 
     // Find existing context by ID or add new one
-    if let Some(existing) = config.contexts.contexts.iter_mut().find(|c| c.id == context.id) {
+    if let Some(existing) = config
+        .contexts
+        .contexts
+        .iter_mut()
+        .find(|c| c.id == context.id)
+    {
         *existing = context;
     } else {
         config.contexts.contexts.push(context);

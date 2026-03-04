@@ -175,9 +175,7 @@ impl MigrationRegistry {
     /// Create a new registry with all known migrations
     pub fn new() -> Self {
         Self {
-            migrations: vec![
-                Box::new(MigrationV1ToV2),
-            ],
+            migrations: vec![Box::new(MigrationV1ToV2)],
         }
     }
 

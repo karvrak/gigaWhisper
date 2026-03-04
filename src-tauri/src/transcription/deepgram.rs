@@ -163,9 +163,8 @@ impl super::TranscriptionProvider for DeepgramProvider {
             });
         }
 
-        Err(last_error.unwrap_or_else(|| {
-            TranscriptionError::Failed("All retry attempts failed".to_string())
-        }))
+        Err(last_error
+            .unwrap_or_else(|| TranscriptionError::Failed("All retry attempts failed".to_string())))
     }
 
     fn name(&self) -> &'static str {

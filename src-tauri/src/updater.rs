@@ -98,10 +98,7 @@ pub struct UpdateInfo {
 }
 
 /// Download and install update, emitting progress events
-async fn do_install_update<R: Runtime>(
-    app: &AppHandle<R>,
-    update: Update,
-) -> Result<(), String> {
+async fn do_install_update<R: Runtime>(app: &AppHandle<R>, update: Update) -> Result<(), String> {
     let app_clone = app.clone();
     let mut downloaded: usize = 0;
 

@@ -179,7 +179,11 @@ pub fn run() {
                         tracing::error!("Failed to disable autostart: {}", e);
                     }
                 }
-                tracing::info!("Autostart state: setting={}, system={}", auto_start_enabled, autostart_manager.is_enabled().unwrap_or(false));
+                tracing::info!(
+                    "Autostart state: setting={}, system={}",
+                    auto_start_enabled,
+                    autostart_manager.is_enabled().unwrap_or(false)
+                );
             }
 
             // Check for updates in the background

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { Download, X, RefreshCw, CheckCircle } from 'lucide-react';
-import { useSettings } from '../hooks/useSettings';
 
 interface UpdateInfo {
   currentVersion: string;
@@ -20,8 +19,6 @@ interface DownloadProgress {
 type UpdateState = 'available' | 'downloading' | 'ready' | 'hidden';
 
 export function UpdateNotification() {
-  const { settings } = useSettings();
-  const autoUpdate = settings?.ui.auto_update ?? false;
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [state, setState] = useState<UpdateState>('hidden');
   const [progress, setProgress] = useState<number>(0);

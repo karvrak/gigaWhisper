@@ -2,8 +2,8 @@
 //!
 //! Tauri commands for license management and premium features.
 
-use crate::AppState;
 use crate::licensing::{FeatureGate, LicenseManager, PremiumFeature};
+use crate::AppState;
 use serde::Serialize;
 
 /// Premium status response sent to frontend
@@ -39,7 +39,10 @@ pub async fn activate_license(
         return Err("License key is too long".to_string());
     }
     if !key.chars().all(|c| c.is_alphanumeric() || c == '-') {
-        return Err("License key contains invalid characters (only alphanumeric and dashes allowed)".to_string());
+        return Err(
+            "License key contains invalid characters (only alphanumeric and dashes allowed)"
+                .to_string(),
+        );
     }
 
     let mut manager = LicenseManager::new();
@@ -74,9 +77,7 @@ pub async fn activate_license(
 
 /// Deactivate the premium license
 #[tauri::command]
-pub async fn deactivate_license(
-    state: tauri::State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn deactivate_license(state: tauri::State<'_, AppState>) -> Result<(), String> {
     let mut manager = LicenseManager::new();
 
     // Restore license key from credential manager so the server can be notified
@@ -152,9 +153,7 @@ pub async fn check_feature(
 
 /// Get credit balance
 #[tauri::command]
-pub async fn get_credits_balance(
-    state: tauri::State<'_, AppState>,
-) -> Result<f64, String> {
+pub async fn get_credits_balance(state: tauri::State<'_, AppState>) -> Result<f64, String> {
     let config = state.config.read();
     Ok(config.premium.credits.balance_eur)
 }

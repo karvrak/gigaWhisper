@@ -351,12 +351,13 @@ impl TranscriptionService {
 
                 // Apply LLM post-processing if enabled
                 if config.post_processing.enabled && !text.is_empty() {
-                    match self
-                        .apply_post_processing(&text, &config)
-                        .await
-                    {
+                    match self.apply_post_processing(&text, &config).await {
                         Ok(processed) => {
-                            tracing::info!("Post-processing applied: '{}' -> '{}'", text, processed);
+                            tracing::info!(
+                                "Post-processing applied: '{}' -> '{}'",
+                                text,
+                                processed
+                            );
                             text = processed;
                         }
                         Err(e) => {
@@ -445,21 +446,15 @@ impl TranscriptionService {
         };
 
         let llm_provider: Box<dyn LlmProvider> = match config.post_processing.default_provider {
-            LlmProviderType::OpenAi => {
-                Box::new(crate::llm::OpenAiLlm::new(Some(
-                    config.post_processing.openai.model.clone(),
-                )))
-            }
-            LlmProviderType::Anthropic => {
-                Box::new(crate::llm::AnthropicLlm::new(Some(
-                    config.post_processing.anthropic.model.clone(),
-                )))
-            }
-            LlmProviderType::GroqLlm => {
-                Box::new(crate::llm::GroqLlm::new(Some(
-                    config.post_processing.groq_llm.model.clone(),
-                )))
-            }
+            LlmProviderType::OpenAi => Box::new(crate::llm::OpenAiLlm::new(Some(
+                config.post_processing.openai.model.clone(),
+            ))),
+            LlmProviderType::Anthropic => Box::new(crate::llm::AnthropicLlm::new(Some(
+                config.post_processing.anthropic.model.clone(),
+            ))),
+            LlmProviderType::GroqLlm => Box::new(crate::llm::GroqLlm::new(Some(
+                config.post_processing.groq_llm.model.clone(),
+            ))),
         };
 
         let response = llm_provider

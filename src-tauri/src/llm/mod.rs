@@ -2,12 +2,12 @@
 //!
 //! Language model providers for post-processing transcriptions.
 
-mod provider;
-mod openai;
 mod anthropic;
 mod groq;
+mod openai;
+mod provider;
 
-pub use provider::*;
-pub use openai::*;
 pub use anthropic::*;
 pub use groq::*;
+pub use openai::*;
+pub use provider::*;
