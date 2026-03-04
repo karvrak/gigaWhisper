@@ -14,7 +14,7 @@ interface Settings {
     settings: string;
   };
   transcription: {
-    provider: 'local' | 'groq';
+    provider: 'local' | 'groq' | 'openai' | 'deepgram';
     language: string;
     local: {
       model: 'tiny' | 'base' | 'small' | 'medium' | 'large';
@@ -26,9 +26,25 @@ interface Settings {
       model: string;
       timeout_seconds: number;
     };
+    openai: {
+      api_key_configured: boolean;
+      model: string;
+      timeout_seconds: number;
+    };
+    deepgram: {
+      api_key_configured: boolean;
+      model: string;
+      timeout_seconds: number;
+    };
   };
   audio: {
     input_device: string | null;
+    vad: {
+      enabled: boolean;
+      aggressiveness: number;
+      min_speech_duration_ms: number;
+      padding_ms: number;
+    };
   };
   output: {
     auto_capitalize: boolean;
@@ -41,6 +57,50 @@ interface Settings {
     theme: 'system' | 'light' | 'dark';
     start_minimized: boolean;
     minimize_to_tray: boolean;
+    custom_theme: string | null;
+  };
+  premium: {
+    is_premium: boolean;
+    expires_at: number | null;
+    last_validated: number | null;
+    credits: {
+      balance_eur: number;
+      low_threshold_eur: number;
+    };
+  };
+  contexts: {
+    active_context: string;
+    contexts: Array<{
+      id: string;
+      name: string;
+      shortcut: string;
+      language: string;
+      provider: 'local' | 'groq' | 'openai' | 'deepgram';
+      model: string | null;
+      post_processing: {
+        enabled: boolean;
+        llm_provider: 'open-ai' | 'anthropic' | 'groq-llm';
+        system_prompt: string;
+      } | null;
+      color: string | null;
+      icon: string | null;
+    }>;
+  };
+  post_processing: {
+    enabled: boolean;
+    default_provider: 'open-ai' | 'anthropic' | 'groq-llm';
+    default_prompt: string;
+    openai: {
+      api_key_configured: boolean;
+      model: string;
+    };
+    anthropic: {
+      api_key_configured: boolean;
+      model: string;
+    };
+    groq_llm: {
+      model: string;
+    };
   };
 }
 

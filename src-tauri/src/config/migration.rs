@@ -41,6 +41,131 @@ pub trait Migration: Send + Sync {
     fn description(&self) -> &'static str;
 }
 
+/// Migration from schema v1 to v2: Add premium features
+struct MigrationV1ToV2;
+
+impl Migration for MigrationV1ToV2 {
+    fn source_version(&self) -> u32 {
+        1
+    }
+
+    fn to_version(&self) -> u32 {
+        2
+    }
+
+    fn description(&self) -> &'static str {
+        "Add premium settings, contexts, post-processing, and new cloud providers"
+    }
+
+    fn migrate(&self, config: &mut toml::Value) -> Result<(), MigrationError> {
+        let table = config.as_table_mut().ok_or(MigrationError::InvalidConfig)?;
+
+        // Add premium section if missing
+        if !table.contains_key("premium") {
+            let mut premium = toml::map::Map::new();
+            premium.insert("is_premium".to_string(), toml::Value::Boolean(false));
+
+            let mut credits = toml::map::Map::new();
+            credits.insert("balance_eur".to_string(), toml::Value::Float(0.0));
+            credits.insert("low_threshold_eur".to_string(), toml::Value::Float(5.0));
+            premium.insert("credits".to_string(), toml::Value::Table(credits));
+
+            table.insert("premium".to_string(), toml::Value::Table(premium));
+        }
+
+        // Add contexts section if missing
+        if !table.contains_key("contexts") {
+            let mut contexts = toml::map::Map::new();
+            contexts.insert(
+                "active_context".to_string(),
+                toml::Value::String("default".to_string()),
+            );
+
+            let mut default_ctx = toml::map::Map::new();
+            default_ctx.insert("id".to_string(), toml::Value::String("default".to_string()));
+            default_ctx.insert(
+                "name".to_string(),
+                toml::Value::String("Default".to_string()),
+            );
+            default_ctx.insert("shortcut".to_string(), toml::Value::String(String::new()));
+            default_ctx.insert(
+                "language".to_string(),
+                toml::Value::String("auto".to_string()),
+            );
+            default_ctx.insert(
+                "provider".to_string(),
+                toml::Value::String("local".to_string()),
+            );
+
+            contexts.insert(
+                "contexts".to_string(),
+                toml::Value::Array(vec![toml::Value::Table(default_ctx)]),
+            );
+            table.insert("contexts".to_string(), toml::Value::Table(contexts));
+        }
+
+        // Add post_processing section if missing
+        if !table.contains_key("post_processing") {
+            let mut pp = toml::map::Map::new();
+            pp.insert("enabled".to_string(), toml::Value::Boolean(false));
+            pp.insert(
+                "default_provider".to_string(),
+                toml::Value::String("groq-llm".to_string()),
+            );
+            pp.insert(
+                "default_prompt".to_string(),
+                toml::Value::String(
+                    "Clean up and fix any errors in this transcription. \
+                     Keep the original meaning and tone. \
+                     Output only the corrected text."
+                        .to_string(),
+                ),
+            );
+            table.insert("post_processing".to_string(), toml::Value::Table(pp));
+        }
+
+        // Add openai and deepgram to transcription section
+        if let Some(toml::Value::Table(transcription)) = table.get_mut("transcription") {
+            if !transcription.contains_key("openai") {
+                let mut openai = toml::map::Map::new();
+                openai.insert(
+                    "api_key_configured".to_string(),
+                    toml::Value::Boolean(false),
+                );
+                openai.insert(
+                    "model".to_string(),
+                    toml::Value::String("whisper-1".to_string()),
+                );
+                openai.insert("timeout_seconds".to_string(), toml::Value::Integer(30));
+                transcription.insert("openai".to_string(), toml::Value::Table(openai));
+            }
+            if !transcription.contains_key("deepgram") {
+                let mut deepgram = toml::map::Map::new();
+                deepgram.insert(
+                    "api_key_configured".to_string(),
+                    toml::Value::Boolean(false),
+                );
+                deepgram.insert(
+                    "model".to_string(),
+                    toml::Value::String("nova-2".to_string()),
+                );
+                deepgram.insert("timeout_seconds".to_string(), toml::Value::Integer(30));
+                transcription.insert("deepgram".to_string(), toml::Value::Table(deepgram));
+            }
+        }
+
+        // Add custom_theme to ui section
+        // Option<String> = None is not serialized in TOML, so we leave it absent.
+        // serde will deserialize a missing field as None with #[serde(default)].
+        if let Some(toml::Value::Table(_ui)) = table.get_mut("ui") {
+            // No action needed: absent key deserializes as None
+        }
+
+        tracing::info!("Migrated config from v1 to v2: added premium features");
+        Ok(())
+    }
+}
+
 /// Migration registry that holds all migrations
 pub struct MigrationRegistry {
     migrations: Vec<Box<dyn Migration>>,
@@ -51,8 +176,7 @@ impl MigrationRegistry {
     pub fn new() -> Self {
         Self {
             migrations: vec![
-                // Register migrations here as they are created
-                // Example: Box::new(MigrationV1ToV2),
+                Box::new(MigrationV1ToV2),
             ],
         }
     }
@@ -84,13 +208,14 @@ impl MigrationRegistry {
             CURRENT_SCHEMA_VERSION
         );
 
-        // Apply migrations in order
+        // Apply migrations in order, chaining from one version to the next
+        let mut current_version = current_version;
         for migration in &self.migrations {
             let from = migration.source_version();
             let to = migration.to_version();
 
-            // Only apply migrations that are in our version range
-            if from >= current_version && to <= CURRENT_SCHEMA_VERSION {
+            // Only apply the migration whose source matches our current version
+            if from == current_version && to <= CURRENT_SCHEMA_VERSION {
                 tracing::debug!(
                     "Applying migration v{} -> v{}: {}",
                     from,
@@ -98,6 +223,7 @@ impl MigrationRegistry {
                     migration.description()
                 );
                 migration.migrate(config)?;
+                current_version = to;
             }
         }
 

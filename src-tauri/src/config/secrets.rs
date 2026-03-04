@@ -34,6 +34,42 @@ impl From<keyring::Error> for SecretsError {
 pub struct SecretsManager;
 
 impl SecretsManager {
+    /// Generic: Store a secret by name
+    pub fn set_secret(name: &str, value: &str) -> Result<(), SecretsError> {
+        if value.trim().is_empty() {
+            return Err(SecretsError::InvalidFormat(
+                "Secret value cannot be empty".to_string(),
+            ));
+        }
+        let entry = Entry::new(SERVICE_NAME, name)
+            .map_err(|e| SecretsError::CredentialStoreError(e.to_string()))?;
+        entry.set_password(value)?;
+        tracing::info!("Secret '{}' stored in credential manager", name);
+        Ok(())
+    }
+
+    /// Generic: Retrieve a secret by name
+    pub fn get_secret(name: &str) -> Result<String, SecretsError> {
+        let entry = Entry::new(SERVICE_NAME, name)
+            .map_err(|e| SecretsError::CredentialStoreError(e.to_string()))?;
+        let password = entry.get_password()?;
+        Ok(password)
+    }
+
+    /// Generic: Delete a secret by name
+    pub fn delete_secret(name: &str) -> Result<(), SecretsError> {
+        let entry = Entry::new(SERVICE_NAME, name)
+            .map_err(|e| SecretsError::CredentialStoreError(e.to_string()))?;
+        entry.delete_credential()?;
+        tracing::info!("Secret '{}' removed from credential manager", name);
+        Ok(())
+    }
+
+    /// Generic: Check if a secret exists
+    pub fn has_secret(name: &str) -> bool {
+        Self::get_secret(name).is_ok()
+    }
+
     /// Store the Groq API key securely
     pub fn set_groq_api_key(api_key: &str) -> Result<(), SecretsError> {
         // Validate before storing

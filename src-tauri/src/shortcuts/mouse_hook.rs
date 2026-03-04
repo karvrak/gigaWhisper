@@ -4,9 +4,16 @@
 //! extra mouse buttons (Mouse4/Mouse5) as global shortcuts.
 //! This is needed because tauri-plugin-global-shortcut (muda) only
 //! supports keyboard shortcuts.
+//!
+//! IMPORTANT: The hook callback (mouse_hook_proc) runs in the Windows input
+//! processing pipeline. If it blocks, ALL mouse input on the entire desktop
+//! freezes. Therefore the callback MUST be completely lock-free and return
+//! as fast as possible. All heavy work is dispatched asynchronously.
 
 #[cfg(windows)]
 use parking_lot::Mutex;
+#[cfg(windows)]
+use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 #[cfg(windows)]
 use std::sync::OnceLock;
 #[cfg(windows)]
@@ -25,35 +32,44 @@ const WM_XBUTTONDOWN: u32 = 0x020B;
 #[cfg(windows)]
 const WM_XBUTTONUP: u32 = 0x020C;
 
+// --- Lock-free hook configuration (read by hook callback without any lock) ---
 #[cfg(windows)]
-struct MouseHookConfig {
-    /// 1 = XBUTTON1 (Mouse4), 2 = XBUTTON2 (Mouse5)
-    target_button: u16,
-    require_ctrl: bool,
-    require_alt: bool,
-    require_shift: bool,
-    app_handle: AppHandle,
-}
+static HOOK_ACTIVE: AtomicBool = AtomicBool::new(false);
+#[cfg(windows)]
+static HOOK_BUTTON: AtomicU16 = AtomicU16::new(0);
+#[cfg(windows)]
+static HOOK_REQUIRE_CTRL: AtomicBool = AtomicBool::new(false);
+#[cfg(windows)]
+static HOOK_REQUIRE_ALT: AtomicBool = AtomicBool::new(false);
+#[cfg(windows)]
+static HOOK_REQUIRE_SHIFT: AtomicBool = AtomicBool::new(false);
+
+// --- AppHandle storage (written during install/uninstall, read via try_lock from hook) ---
+#[cfg(windows)]
+static APP_HANDLE: OnceLock<Mutex<Option<AppHandle>>> = OnceLock::new();
 
 #[cfg(windows)]
-struct HookState {
-    config: Option<MouseHookConfig>,
+fn get_app_handle_store() -> &'static Mutex<Option<AppHandle>> {
+    APP_HANDLE.get_or_init(|| Mutex::new(None))
+}
+
+// --- Thread management (never accessed from hook callback) ---
+#[cfg(windows)]
+struct ThreadState {
     thread_id: Option<u32>,
     thread_handle: Option<std::thread::JoinHandle<()>>,
 }
 
-// Safety: HHOOK is isize (Send+Sync), AppHandle is Send+Sync, JoinHandle<()> is Send
 #[cfg(windows)]
-unsafe impl Send for HookState {}
+unsafe impl Send for ThreadState {}
 
 #[cfg(windows)]
-static STATE: OnceLock<Mutex<HookState>> = OnceLock::new();
+static THREAD_STATE: OnceLock<Mutex<ThreadState>> = OnceLock::new();
 
 #[cfg(windows)]
-fn get_state() -> &'static Mutex<HookState> {
-    STATE.get_or_init(|| {
-        Mutex::new(HookState {
-            config: None,
+fn get_thread_state() -> &'static Mutex<ThreadState> {
+    THREAD_STATE.get_or_init(|| {
+        Mutex::new(ThreadState {
             thread_id: None,
             thread_handle: None,
         })
@@ -88,44 +104,47 @@ fn parse_mouse_shortcut(shortcut: &str) -> Option<(u16, bool, bool, bool)> {
     button.map(|b| (b, ctrl, alt, shift))
 }
 
-/// Low-level mouse hook procedure
+/// Low-level mouse hook procedure.
+///
+/// CRITICAL: This function MUST return as fast as possible and NEVER block.
+/// Windows calls this in the input processing pipeline - if it blocks,
+/// ALL mouse input on the entire desktop freezes until it returns.
 #[cfg(windows)]
 unsafe extern "system" fn mouse_hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    if code >= 0 {
+    if code >= 0 && HOOK_ACTIVE.load(Ordering::Acquire) {
         let msg = wparam.0 as u32;
         if msg == WM_XBUTTONDOWN || msg == WM_XBUTTONUP {
             let info = &*(lparam.0 as *const MSLLHOOKSTRUCT);
             let xbutton = (info.mouseData >> 16) as u16;
 
-            // Read config under lock, clone AppHandle, release lock before calling handler
-            let matched = {
-                let state = get_state().lock();
-                if let Some(ref config) = state.config {
-                    if xbutton == config.target_button {
-                        let ctrl_ok = !config.require_ctrl
-                            || (GetAsyncKeyState(VK_CONTROL.0 as i32) as u16 & 0x8000 != 0);
-                        let alt_ok = !config.require_alt
-                            || (GetAsyncKeyState(VK_MENU.0 as i32) as u16 & 0x8000 != 0);
-                        let shift_ok = !config.require_shift
-                            || (GetAsyncKeyState(VK_SHIFT.0 as i32) as u16 & 0x8000 != 0);
+            if xbutton == HOOK_BUTTON.load(Ordering::Relaxed) {
+                // Check modifier keys (lock-free, just reading key state)
+                let ctrl_ok = !HOOK_REQUIRE_CTRL.load(Ordering::Relaxed)
+                    || (GetAsyncKeyState(VK_CONTROL.0 as i32) as u16 & 0x8000 != 0);
+                let alt_ok = !HOOK_REQUIRE_ALT.load(Ordering::Relaxed)
+                    || (GetAsyncKeyState(VK_MENU.0 as i32) as u16 & 0x8000 != 0);
+                let shift_ok = !HOOK_REQUIRE_SHIFT.load(Ordering::Relaxed)
+                    || (GetAsyncKeyState(VK_SHIFT.0 as i32) as u16 & 0x8000 != 0);
 
-                        if ctrl_ok && alt_ok && shift_ok {
-                            Some((config.app_handle.clone(), msg == WM_XBUTTONDOWN))
-                        } else {
-                            None
+                if ctrl_ok && alt_ok && shift_ok {
+                    // Get app handle via try_lock - NEVER block here.
+                    // If the lock is contended (install/uninstall in progress), skip this event.
+                    if let Some(guard) = get_app_handle_store().try_lock() {
+                        if let Some(ref app) = *guard {
+                            let app_clone = app.clone();
+                            let is_pressed = msg == WM_XBUTTONDOWN;
+                            // Drop the guard BEFORE spawning to minimize lock hold time
+                            drop(guard);
+                            // Dispatch asynchronously - NEVER call handle_mouse_event
+                            // on the hook thread, as it reads RwLocks that could block.
+                            tauri::async_runtime::spawn(async move {
+                                super::handle_mouse_event(&app_clone, is_pressed);
+                            });
                         }
-                    } else {
-                        None
                     }
-                } else {
-                    None
+                    // Consume the event to prevent browser back/forward
+                    return LRESULT(1);
                 }
-            };
-
-            if let Some((app, is_pressed)) = matched {
-                super::handle_mouse_event(&app, is_pressed);
-                // Consume the event to prevent browser back/forward
-                return LRESULT(1);
             }
         }
     }
@@ -142,17 +161,20 @@ pub fn install(shortcut: &str, app_handle: AppHandle) -> Result<(), Box<dyn std:
     // Uninstall any existing hook first
     uninstall();
 
-    // Set config before starting the thread
+    // Set lock-free config (atomics) - readable by hook without any lock
+    HOOK_BUTTON.store(button, Ordering::Relaxed);
+    HOOK_REQUIRE_CTRL.store(ctrl, Ordering::Relaxed);
+    HOOK_REQUIRE_ALT.store(alt, Ordering::Relaxed);
+    HOOK_REQUIRE_SHIFT.store(shift, Ordering::Relaxed);
+
+    // Store the app handle
     {
-        let mut state = get_state().lock();
-        state.config = Some(MouseHookConfig {
-            target_button: button,
-            require_ctrl: ctrl,
-            require_alt: alt,
-            require_shift: shift,
-            app_handle,
-        });
+        let mut handle = get_app_handle_store().lock();
+        *handle = Some(app_handle);
     }
+
+    // Activate the hook config (release ordering ensures all stores above are visible)
+    HOOK_ACTIVE.store(true, Ordering::Release);
 
     // Spawn a dedicated thread for the mouse hook message pump
     let thread = std::thread::Builder::new()
@@ -165,7 +187,7 @@ pub fn install(shortcut: &str, app_handle: AppHandle) -> Result<(), Box<dyn std:
                 match hook {
                     Ok(hook) => {
                         {
-                            let mut state = get_state().lock();
+                            let mut state = get_thread_state().lock();
                             state.thread_id =
                                 Some(windows::Win32::System::Threading::GetCurrentThreadId());
                         }
@@ -192,7 +214,7 @@ pub fn install(shortcut: &str, app_handle: AppHandle) -> Result<(), Box<dyn std:
 
     // Store the thread handle
     {
-        let mut state = get_state().lock();
+        let mut state = get_thread_state().lock();
         state.thread_handle = Some(thread);
     }
 
@@ -206,9 +228,18 @@ pub fn install(shortcut: &str, app_handle: AppHandle) -> Result<(), Box<dyn std:
 /// Uninstall the mouse hook
 #[cfg(windows)]
 pub fn uninstall() {
+    // Deactivate the hook first (lock-free, immediate effect)
+    HOOK_ACTIVE.store(false, Ordering::Release);
+
+    // Clear the app handle
+    {
+        let mut handle = get_app_handle_store().lock();
+        *handle = None;
+    }
+
+    // Stop the hook thread
     let (thread_id, thread_handle) = {
-        let mut state = get_state().lock();
-        state.config = None;
+        let mut state = get_thread_state().lock();
         (state.thread_id.take(), state.thread_handle.take())
     };
 

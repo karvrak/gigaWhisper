@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useSettings } from '../hooks/useSettings';
+import { usePremium } from '../hooks/usePremium';
 import { HotkeyInput } from './HotkeyInput';
 import { ModelSelector } from './ModelSelector';
+import { LicensePanel } from './premium/LicensePanel';
+import { ContextManager } from './premium/ContextManager';
+import { PostProcessingConfig } from './premium/PostProcessingConfig';
+import { PremiumBadge } from './premium/PremiumBadge';
 import { Sun, Moon, Monitor } from 'lucide-react';
 
 interface AudioDevice {
@@ -12,7 +17,9 @@ interface AudioDevice {
 
 export function SettingsPanel() {
   const { settings, updateSettings, saving, error } = useSettings();
-  const [activeTab, setActiveTab] = useState<'general' | 'transcription' | 'audio'>('general');
+  const { status: premiumStatus } = usePremium();
+  const isPremium = premiumStatus?.is_premium ?? false;
+  const [activeTab, setActiveTab] = useState<'general' | 'transcription' | 'audio' | 'premium' | 'contexts' | 'post-processing'>('general');
   const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([]);
 
   // Fetch audio devices on mount
@@ -40,6 +47,9 @@ export function SettingsPanel() {
     { id: 'general' as const, label: 'General' },
     { id: 'transcription' as const, label: 'Transcription' },
     { id: 'audio' as const, label: 'Audio' },
+    { id: 'contexts' as const, label: 'Contexts', premium: true },
+    { id: 'post-processing' as const, label: 'Post-Processing', premium: true },
+    { id: 'premium' as const, label: 'Premium' },
   ];
 
   return (
@@ -51,13 +61,14 @@ export function SettingsPanel() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative px-4 py-3 text-sm font-medium transition-all duration-150 -mb-px ${
+              className={`relative px-4 py-3 text-sm font-medium transition-all duration-150 -mb-px flex items-center gap-1.5 ${
                 activeTab === tab.id
                   ? 'text-indigo-600 dark:text-indigo-400'
                   : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
               {tab.label}
+              {'premium' in tab && tab.premium && <PremiumBadge locked={!isPremium} />}
               {activeTab === tab.id && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full" />
               )}
@@ -400,6 +411,18 @@ export function SettingsPanel() {
               </div>
             </div>
           </>
+        )}
+
+        {activeTab === 'contexts' && (
+          <ContextManager />
+        )}
+
+        {activeTab === 'post-processing' && (
+          <PostProcessingConfig />
+        )}
+
+        {activeTab === 'premium' && (
+          <LicensePanel />
         )}
 
         {/* Save Indicator */}

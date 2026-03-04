@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Current schema version for migration support
 /// Increment this when making breaking changes to the settings structure
-pub const CURRENT_SCHEMA_VERSION: u32 = 1;
+pub const CURRENT_SCHEMA_VERSION: u32 = 2;
 
 /// Default schema version for new or migrated configs
 fn default_schema_version() -> u32 {
@@ -28,6 +28,9 @@ pub struct Settings {
     pub audio: AudioSettings,
     pub output: OutputSettings,
     pub ui: UiSettings,
+    pub premium: PremiumSettings,
+    pub contexts: ContextsSettings,
+    pub post_processing: PostProcessingSettings,
 }
 
 impl Default for Settings {
@@ -40,6 +43,9 @@ impl Default for Settings {
             audio: AudioSettings::default(),
             output: OutputSettings::default(),
             ui: UiSettings::default(),
+            premium: PremiumSettings::default(),
+            contexts: ContextsSettings::default(),
+            post_processing: PostProcessingSettings::default(),
         }
     }
 }
@@ -54,11 +60,18 @@ impl Settings {
             ));
         }
 
-        // Validate Groq API key if cloud provider selected
-        if self.transcription.provider == TranscriptionProvider::Groq
-            && !self.transcription.groq.has_api_key()
-        {
-            return Err(SettingsError::MissingApiKey);
+        // Validate API key for cloud providers
+        match self.transcription.provider {
+            TranscriptionProvider::Groq if !self.transcription.groq.has_api_key() => {
+                return Err(SettingsError::MissingApiKey);
+            }
+            TranscriptionProvider::OpenAi if !self.transcription.openai.api_key_configured => {
+                return Err(SettingsError::MissingApiKey);
+            }
+            TranscriptionProvider::Deepgram if !self.transcription.deepgram.api_key_configured => {
+                return Err(SettingsError::MissingApiKey);
+            }
+            _ => {}
         }
 
         // Validate recording settings
@@ -197,6 +210,10 @@ pub struct TranscriptionSettings {
     pub local: LocalTranscriptionSettings,
     /// Groq API settings
     pub groq: GroqSettings,
+    /// OpenAI Whisper API settings
+    pub openai: OpenAiTranscriptionSettings,
+    /// Deepgram API settings
+    pub deepgram: DeepgramSettings,
 }
 
 impl Default for TranscriptionSettings {
@@ -206,6 +223,8 @@ impl Default for TranscriptionSettings {
             language: "auto".to_string(),
             local: LocalTranscriptionSettings::default(),
             groq: GroqSettings::default(),
+            openai: OpenAiTranscriptionSettings::default(),
+            deepgram: DeepgramSettings::default(),
         }
     }
 }
@@ -213,8 +232,8 @@ impl Default for TranscriptionSettings {
 impl TranscriptionSettings {
     /// Maximum thread count (reasonable limit)
     pub const MAX_THREADS: usize = 64;
-    /// Maximum Groq timeout (5 minutes)
-    pub const MAX_GROQ_TIMEOUT: u32 = 300;
+    /// Maximum provider timeout (5 minutes)
+    pub const MAX_TIMEOUT: u32 = 300;
 
     /// Validate transcription settings
     pub fn validate(&self) -> Result<(), SettingsError> {
@@ -230,11 +249,35 @@ impl TranscriptionSettings {
                 "groq timeout_seconds cannot be 0".to_string(),
             ));
         }
-        if self.groq.timeout_seconds > Self::MAX_GROQ_TIMEOUT {
+        if self.groq.timeout_seconds > Self::MAX_TIMEOUT {
             return Err(SettingsError::InvalidValue(format!(
                 "groq timeout_seconds {} exceeds limit of {} seconds",
                 self.groq.timeout_seconds,
-                Self::MAX_GROQ_TIMEOUT
+                Self::MAX_TIMEOUT
+            )));
+        }
+        if self.openai.timeout_seconds == 0 {
+            return Err(SettingsError::InvalidValue(
+                "openai timeout_seconds cannot be 0".to_string(),
+            ));
+        }
+        if self.openai.timeout_seconds > Self::MAX_TIMEOUT {
+            return Err(SettingsError::InvalidValue(format!(
+                "openai timeout_seconds {} exceeds limit of {} seconds",
+                self.openai.timeout_seconds,
+                Self::MAX_TIMEOUT
+            )));
+        }
+        if self.deepgram.timeout_seconds == 0 {
+            return Err(SettingsError::InvalidValue(
+                "deepgram timeout_seconds cannot be 0".to_string(),
+            ));
+        }
+        if self.deepgram.timeout_seconds > Self::MAX_TIMEOUT {
+            return Err(SettingsError::InvalidValue(format!(
+                "deepgram timeout_seconds {} exceeds limit of {} seconds",
+                self.deepgram.timeout_seconds,
+                Self::MAX_TIMEOUT
             )));
         }
         Ok(())
@@ -244,9 +287,17 @@ impl TranscriptionSettings {
     pub fn sanitize(&mut self) {
         self.local.threads = self.local.threads.min(Self::MAX_THREADS);
         if self.groq.timeout_seconds == 0 {
-            self.groq.timeout_seconds = 30; // Reset to default
+            self.groq.timeout_seconds = 30;
         }
-        self.groq.timeout_seconds = self.groq.timeout_seconds.min(Self::MAX_GROQ_TIMEOUT);
+        self.groq.timeout_seconds = self.groq.timeout_seconds.min(Self::MAX_TIMEOUT);
+        if self.openai.timeout_seconds == 0 {
+            self.openai.timeout_seconds = 30;
+        }
+        self.openai.timeout_seconds = self.openai.timeout_seconds.min(Self::MAX_TIMEOUT);
+        if self.deepgram.timeout_seconds == 0 {
+            self.deepgram.timeout_seconds = 30;
+        }
+        self.deepgram.timeout_seconds = self.deepgram.timeout_seconds.min(Self::MAX_TIMEOUT);
     }
 }
 
@@ -256,6 +307,8 @@ impl TranscriptionSettings {
 pub enum TranscriptionProvider {
     Local,
     Groq,
+    OpenAi,
+    Deepgram,
 }
 
 /// GPU backend selection for whisper acceleration
@@ -655,6 +708,9 @@ pub struct UiSettings {
     pub start_minimized: bool,
     /// Minimize to tray instead of taskbar
     pub minimize_to_tray: bool,
+    /// Custom theme name (premium feature)
+    #[serde(default)]
+    pub custom_theme: Option<String>,
 }
 
 impl Default for UiSettings {
@@ -665,6 +721,7 @@ impl Default for UiSettings {
             theme: Theme::System,
             start_minimized: false,
             minimize_to_tray: true,
+            custom_theme: None,
         }
     }
 }
@@ -707,6 +764,235 @@ pub enum SettingsError {
 
     #[error("Deserialization error: {0}")]
     Deserialization(#[from] toml::de::Error),
+}
+
+/// Premium license settings (cached state)
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PremiumSettings {
+    /// Whether premium is active (cached)
+    pub is_premium: bool,
+    /// License expiration timestamp
+    pub expires_at: Option<u64>,
+    /// Last successful validation timestamp
+    pub last_validated: Option<u64>,
+    /// Credit balance cached state
+    pub credits: CreditsCacheSettings,
+}
+
+/// Cached credit state in settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CreditsCacheSettings {
+    /// Cached balance in EUR
+    pub balance_eur: f64,
+    /// Low balance threshold
+    pub low_threshold_eur: f64,
+}
+
+impl Default for CreditsCacheSettings {
+    fn default() -> Self {
+        Self {
+            balance_eur: 0.0,
+            low_threshold_eur: 5.0,
+        }
+    }
+}
+
+/// Multi-context transcription settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ContextsSettings {
+    /// Active context ID
+    pub active_context: String,
+    /// All defined contexts
+    pub contexts: Vec<TranscriptionContext>,
+}
+
+impl Default for ContextsSettings {
+    fn default() -> Self {
+        Self {
+            active_context: "default".to_string(),
+            contexts: vec![TranscriptionContext::default()],
+        }
+    }
+}
+
+/// A transcription context with its own settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranscriptionContext {
+    /// Unique identifier
+    pub id: String,
+    /// Display name
+    pub name: String,
+    /// Keyboard shortcut
+    pub shortcut: String,
+    /// Language override (ISO 639-1 or "auto")
+    pub language: String,
+    /// Provider override
+    pub provider: TranscriptionProvider,
+    /// Model override
+    pub model: Option<String>,
+    /// LLM post-processing config for this context
+    pub post_processing: Option<ContextPostProcessing>,
+    /// Badge color (hex)
+    pub color: Option<String>,
+    /// Icon emoji
+    pub icon: Option<String>,
+}
+
+impl Default for TranscriptionContext {
+    fn default() -> Self {
+        Self {
+            id: "default".to_string(),
+            name: "Default".to_string(),
+            shortcut: String::new(),
+            language: "auto".to_string(),
+            provider: TranscriptionProvider::Local,
+            model: None,
+            post_processing: None,
+            color: None,
+            icon: None,
+        }
+    }
+}
+
+/// Per-context post-processing config
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextPostProcessing {
+    /// Whether post-processing is enabled
+    pub enabled: bool,
+    /// LLM provider to use
+    pub llm_provider: LlmProviderType,
+    /// System prompt for the LLM
+    pub system_prompt: String,
+}
+
+/// Post-processing settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PostProcessingSettings {
+    /// Whether post-processing is globally enabled
+    pub enabled: bool,
+    /// Default LLM provider
+    pub default_provider: LlmProviderType,
+    /// Default system prompt
+    pub default_prompt: String,
+    /// OpenAI settings
+    pub openai: OpenAiLlmSettings,
+    /// Anthropic settings
+    pub anthropic: AnthropicLlmSettings,
+    /// Groq LLM settings
+    pub groq_llm: GroqLlmSettings,
+}
+
+impl Default for PostProcessingSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            default_provider: LlmProviderType::GroqLlm,
+            default_prompt: "Clean up and fix any errors in this transcription. Keep the original meaning and tone. Output only the corrected text.".to_string(),
+            openai: OpenAiLlmSettings::default(),
+            anthropic: AnthropicLlmSettings::default(),
+            groq_llm: GroqLlmSettings::default(),
+        }
+    }
+}
+
+/// LLM provider types for post-processing
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum LlmProviderType {
+    OpenAi,
+    Anthropic,
+    GroqLlm,
+}
+
+/// OpenAI LLM settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OpenAiLlmSettings {
+    pub api_key_configured: bool,
+    pub model: String,
+}
+
+impl Default for OpenAiLlmSettings {
+    fn default() -> Self {
+        Self {
+            api_key_configured: false,
+            model: "gpt-4o-mini".to_string(),
+        }
+    }
+}
+
+/// Anthropic LLM settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AnthropicLlmSettings {
+    pub api_key_configured: bool,
+    pub model: String,
+}
+
+impl Default for AnthropicLlmSettings {
+    fn default() -> Self {
+        Self {
+            api_key_configured: false,
+            model: "claude-haiku-4-5-20251001".to_string(),
+        }
+    }
+}
+
+/// Groq LLM settings (for post-processing, not transcription)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GroqLlmSettings {
+    pub model: String,
+}
+
+impl Default for GroqLlmSettings {
+    fn default() -> Self {
+        Self {
+            model: "llama-3.1-8b-instant".to_string(),
+        }
+    }
+}
+
+/// OpenAI Whisper transcription settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OpenAiTranscriptionSettings {
+    pub api_key_configured: bool,
+    pub model: String,
+    pub timeout_seconds: u32,
+}
+
+impl Default for OpenAiTranscriptionSettings {
+    fn default() -> Self {
+        Self {
+            api_key_configured: false,
+            model: "whisper-1".to_string(),
+            timeout_seconds: 30,
+        }
+    }
+}
+
+/// Deepgram transcription settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DeepgramSettings {
+    pub api_key_configured: bool,
+    pub model: String,
+    pub timeout_seconds: u32,
+}
+
+impl Default for DeepgramSettings {
+    fn default() -> Self {
+        Self {
+            api_key_configured: false,
+            model: "nova-2".to_string(),
+            timeout_seconds: 30,
+        }
+    }
 }
 
 #[cfg(test)]

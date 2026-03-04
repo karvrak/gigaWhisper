@@ -29,9 +29,25 @@ const mockSettings = {
       model: 'whisper-large-v3',
       timeout_seconds: 30,
     },
+    openai: {
+      api_key_configured: false,
+      model: 'whisper-1',
+      timeout_seconds: 30,
+    },
+    deepgram: {
+      api_key_configured: false,
+      model: 'nova-2',
+      timeout_seconds: 30,
+    },
   },
   audio: {
     input_device: null,
+    vad: {
+      enabled: false,
+      aggressiveness: 2,
+      min_speech_duration_ms: 250,
+      padding_ms: 300,
+    },
   },
   output: {
     auto_capitalize: true,
@@ -44,6 +60,46 @@ const mockSettings = {
     theme: 'system' as const,
     start_minimized: false,
     minimize_to_tray: true,
+    custom_theme: null,
+  },
+  premium: {
+    is_premium: false,
+    expires_at: null,
+    last_validated: null,
+    credits: {
+      balance_eur: 0,
+      low_threshold_eur: 5,
+    },
+  },
+  contexts: {
+    active_context: 'default',
+    contexts: [{
+      id: 'default',
+      name: 'Default',
+      shortcut: '',
+      language: 'auto',
+      provider: 'local' as const,
+      model: null,
+      post_processing: null,
+      color: null,
+      icon: null,
+    }],
+  },
+  post_processing: {
+    enabled: false,
+    default_provider: 'groq-llm' as const,
+    default_prompt: 'Clean up and fix any errors in this transcription.',
+    openai: {
+      api_key_configured: false,
+      model: 'gpt-4o-mini',
+    },
+    anthropic: {
+      api_key_configured: false,
+      model: 'claude-haiku-4-5-20251001',
+    },
+    groq_llm: {
+      model: 'llama-3.1-8b-instant',
+    },
   },
 };
 

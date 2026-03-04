@@ -7,6 +7,8 @@ pub mod build_info;
 pub mod commands;
 pub mod config;
 pub mod history;
+pub mod licensing;
+pub mod llm;
 pub mod models;
 pub mod output;
 pub mod shortcuts;
@@ -216,6 +218,15 @@ pub fn run() {
             commands::history::clear_history,
             commands::history::get_history_count,
             commands::history::get_audio_data,
+            commands::premium::activate_license,
+            commands::premium::deactivate_license,
+            commands::premium::get_premium_status,
+            commands::premium::check_feature,
+            commands::premium::get_credits_balance,
+            commands::contexts::get_contexts,
+            commands::contexts::save_context,
+            commands::contexts::delete_context,
+            commands::contexts::set_active_context,
             updater::install_update,
             updater::restart_app,
             updater::get_build_variant,

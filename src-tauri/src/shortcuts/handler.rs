@@ -401,6 +401,8 @@ fn show_recording_indicator(app: &AppHandle) {
     }
 
     if let Some(window) = app.get_webview_window("recording-indicator") {
+        // Ensure the overlay never captures mouse clicks
+        let _ = window.set_ignore_cursor_events(true);
         let _ = window.show();
 
         let window_clone = window.clone();

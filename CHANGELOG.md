@@ -7,9 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-03-04
+
+### Added
+- Premium licensing architecture and documentation
+- Deepgram and OpenAI transcription providers
+- LLM module for AI-powered features
+- Premium components and hooks (useCredits, usePremium, useContexts)
+- Theme system with customizable themes
+- TypeScript type definitions
+
 ### Changed
+- Extended settings with new provider configurations
+- Enhanced config migration and secrets management
+- Improved mouse hook handling for shortcuts
+- Updated ProviderToggle and SettingsPanel components
 - Applied rustfmt formatting to all Rust source files
-- Updated tests to match component changes for v1.0.5
+- Updated tests to match component changes
 
 ## [1.0.5] - 2025-03-01
 
@@ -116,7 +130,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Force x86-64-v2 CPU target for compatibility
 - CUDA build fixes (cublas packages, visual_studio_integration)
 
-[Unreleased]: https://github.com/karvrak/gigaWhisper/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/karvrak/gigaWhisper/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/karvrak/gigaWhisper/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/karvrak/gigaWhisper/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/karvrak/gigaWhisper/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/karvrak/gigaWhisper/compare/v1.0.2...v1.0.3

@@ -4,10 +4,12 @@
 //! Handles provider caching, status tracking, and shared logic.
 
 use super::{
-    GroqProvider, TranscriptionConfig, TranscriptionProvider, TranscriptionResult, WhisperProvider,
+    DeepgramProvider, GroqProvider, OpenAiProvider, TranscriptionConfig, TranscriptionProvider,
+    TranscriptionResult, WhisperProvider,
 };
 use crate::audio::{resample, VadAggressiveness, VadConfig, VoiceActivityDetector};
 use crate::config::{Settings, TranscriptionProvider as ConfigProvider};
+use crate::llm::{LlmProvider, LlmRequest};
 use crate::output;
 use crate::utils::{metrics, TranscriptionRecord};
 use parking_lot::RwLock;
@@ -77,6 +79,8 @@ impl TranscriptionService {
         status.provider = match config.transcription.provider {
             ConfigProvider::Local => "local".to_string(),
             ConfigProvider::Groq => "groq".to_string(),
+            ConfigProvider::OpenAi => "openai".to_string(),
+            ConfigProvider::Deepgram => "deepgram".to_string(),
         };
         status.model = format!("{:?}", config.transcription.local.model).to_lowercase();
 
@@ -182,6 +186,26 @@ impl TranscriptionService {
                 let provider = GroqProvider::with_timeout(
                     Some(config.transcription.groq.model.clone()),
                     config.transcription.groq.timeout_seconds as u64,
+                );
+                provider
+                    .transcribe(samples, &transcription_config)
+                    .await
+                    .map_err(|e| e.to_string())
+            }
+            ConfigProvider::OpenAi => {
+                let provider = OpenAiProvider::with_timeout(
+                    Some(config.transcription.openai.model.clone()),
+                    config.transcription.openai.timeout_seconds as u64,
+                );
+                provider
+                    .transcribe(samples, &transcription_config)
+                    .await
+                    .map_err(|e| e.to_string())
+            }
+            ConfigProvider::Deepgram => {
+                let provider = DeepgramProvider::with_timeout(
+                    Some(config.transcription.deepgram.model.clone()),
+                    config.transcription.deepgram.timeout_seconds as u64,
                 );
                 provider
                     .transcribe(samples, &transcription_config)
@@ -317,13 +341,29 @@ impl TranscriptionService {
 
         match result {
             Ok(transcription) => {
-                let text = transcription.text.clone();
+                let mut text = transcription.text.clone();
                 tracing::info!(
                     "Transcription complete: '{}' ({}ms, {})",
                     text,
                     transcription.duration_ms,
                     transcription.provider
                 );
+
+                // Apply LLM post-processing if enabled
+                if config.post_processing.enabled && !text.is_empty() {
+                    match self
+                        .apply_post_processing(&text, &config)
+                        .await
+                    {
+                        Ok(processed) => {
+                            tracing::info!("Post-processing applied: '{}' -> '{}'", text, processed);
+                            text = processed;
+                        }
+                        Err(e) => {
+                            tracing::warn!("Post-processing failed, using original text: {}", e);
+                        }
+                    }
+                }
 
                 // Record performance metrics
                 let record = TranscriptionRecord::builder()
@@ -361,8 +401,8 @@ impl TranscriptionService {
                 let _ = app.emit("transcription:complete", &text);
 
                 // Notify user
-                let preview = if text.len() > 50 {
-                    format!("{}...", &text[..50])
+                let preview = if text.chars().count() > 50 {
+                    format!("{}...", text.chars().take(50).collect::<String>())
                 } else if text.is_empty() {
                     "(No speech detected)".to_string()
                 } else {
@@ -391,6 +431,43 @@ impl TranscriptionService {
                 Err(e)
             }
         }
+    }
+
+    /// Apply LLM post-processing to transcribed text
+    async fn apply_post_processing(&self, text: &str, config: &Settings) -> Result<String, String> {
+        use crate::config::LlmProviderType;
+
+        let prompt = &config.post_processing.default_prompt;
+        let request = LlmRequest {
+            system_prompt: prompt.clone(),
+            user_message: text.to_string(),
+            max_tokens: 2048,
+        };
+
+        let llm_provider: Box<dyn LlmProvider> = match config.post_processing.default_provider {
+            LlmProviderType::OpenAi => {
+                Box::new(crate::llm::OpenAiLlm::new(Some(
+                    config.post_processing.openai.model.clone(),
+                )))
+            }
+            LlmProviderType::Anthropic => {
+                Box::new(crate::llm::AnthropicLlm::new(Some(
+                    config.post_processing.anthropic.model.clone(),
+                )))
+            }
+            LlmProviderType::GroqLlm => {
+                Box::new(crate::llm::GroqLlm::new(Some(
+                    config.post_processing.groq_llm.model.clone(),
+                )))
+            }
+        };
+
+        let response = llm_provider
+            .complete(&request)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(response.text)
     }
 
     /// Output transcribed text (clipboard + paste or popup)
