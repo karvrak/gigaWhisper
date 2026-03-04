@@ -90,6 +90,12 @@ pub struct LicenseManager {
     client: reqwest::Client,
 }
 
+impl Default for LicenseManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LicenseManager {
     /// Create a new LicenseManager with a generated machine_id
     pub fn new() -> Self {

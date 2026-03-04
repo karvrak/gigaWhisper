@@ -46,8 +46,10 @@ pub async fn activate_license(
 
     // Restore existing license key from credential manager if available
     if let Ok(Some(stored_key)) = LicenseManager::get_stored_license_key() {
-        let mut restored_state = crate::licensing::LicenseState::default();
-        restored_state.license_key = Some(stored_key);
+        let restored_state = crate::licensing::LicenseState {
+            license_key: Some(stored_key),
+            ..Default::default()
+        };
         manager.restore_state(restored_state);
     }
 
@@ -79,8 +81,10 @@ pub async fn deactivate_license(
 
     // Restore license key from credential manager so the server can be notified
     if let Ok(Some(stored_key)) = LicenseManager::get_stored_license_key() {
-        let mut restored_state = crate::licensing::LicenseState::default();
-        restored_state.license_key = Some(stored_key);
+        let restored_state = crate::licensing::LicenseState {
+            license_key: Some(stored_key),
+            ..Default::default()
+        };
         manager.restore_state(restored_state);
     }
 

@@ -50,11 +50,8 @@ pub struct FeatureGate;
 impl FeatureGate {
     /// Check if a premium feature is available
     /// Returns true if user has premium license (active or in grace period)
-    pub fn is_available(feature: PremiumFeature, is_premium: bool) -> bool {
-        match feature {
-            // All premium features require license
-            _ => is_premium,
-        }
+    pub fn is_available(_feature: PremiumFeature, is_premium: bool) -> bool {
+        is_premium
     }
 
     /// Check if user can use own API key for a provider (always allowed)

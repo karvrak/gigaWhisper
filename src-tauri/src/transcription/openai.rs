@@ -18,7 +18,6 @@ const SECRET_NAME: &str = "openai_api_key";
 pub struct OpenAiProvider {
     model: String,
     client: reqwest::Client,
-    timeout: Duration,
     max_retries: u32,
 }
 
@@ -37,7 +36,6 @@ impl OpenAiProvider {
         Self {
             model: model.unwrap_or_else(|| "whisper-1".to_string()),
             client,
-            timeout,
             max_retries: DEFAULT_MAX_RETRIES,
         }
     }

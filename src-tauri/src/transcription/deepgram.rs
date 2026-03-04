@@ -18,7 +18,6 @@ const SECRET_NAME: &str = "deepgram_api_key";
 pub struct DeepgramProvider {
     model: String,
     client: reqwest::Client,
-    timeout: Duration,
     max_retries: u32,
 }
 
@@ -37,7 +36,6 @@ impl DeepgramProvider {
         Self {
             model: model.unwrap_or_else(|| "nova-2".to_string()),
             client,
-            timeout,
             max_retries: DEFAULT_MAX_RETRIES,
         }
     }
