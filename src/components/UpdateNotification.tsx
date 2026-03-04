@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { Download, X, RefreshCw, CheckCircle } from 'lucide-react';
+import { useSettings } from '../hooks/useSettings';
 
 interface UpdateInfo {
   currentVersion: string;
@@ -19,6 +20,8 @@ interface DownloadProgress {
 type UpdateState = 'available' | 'downloading' | 'ready' | 'hidden';
 
 export function UpdateNotification() {
+  const { settings } = useSettings();
+  const autoUpdate = settings?.ui.auto_update ?? false;
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [state, setState] = useState<UpdateState>('hidden');
   const [progress, setProgress] = useState<number>(0);
@@ -39,16 +42,32 @@ export function UpdateNotification() {
       }
     });
 
-    // Listen for update installed
-    const unsubscribeInstalled = listen('update-installed', () => {
+    // Listen for update installed - auto-restart if auto_update is enabled
+    const unsubscribeInstalled = listen('update-installed', async () => {
       setState('ready');
       setProgress(100);
+    });
+
+    // Listen for auto-restart: when update is ready and auto_update is on
+    const unsubscribeAutoRestart = listen('update-installed', async () => {
+      // Small delay to let the UI update before restarting
+      await new Promise((r) => setTimeout(r, 2000));
+      // Re-check setting at event time via fresh invoke
+      try {
+        const currentSettings = await invoke<{ ui: { auto_update: boolean } }>('get_settings');
+        if (currentSettings.ui.auto_update) {
+          await invoke('restart_app');
+        }
+      } catch {
+        // Ignore - user will see the restart button
+      }
     });
 
     return () => {
       unsubscribeAvailable.then((fn) => fn());
       unsubscribeProgress.then((fn) => fn());
       unsubscribeInstalled.then((fn) => fn());
+      unsubscribeAutoRestart.then((fn) => fn());
     };
   }, []);
 

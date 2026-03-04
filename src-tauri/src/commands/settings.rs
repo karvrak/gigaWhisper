@@ -26,11 +26,12 @@ pub async fn save_settings(
     settings.validate().map_err(|e| e.to_string())?;
 
     // Check if shortcuts have changed
-    let old_shortcut = {
+    let (old_shortcut, old_auto_start) = {
         let config = state.config.read();
-        config.shortcuts.record.clone()
+        (config.shortcuts.record.clone(), config.ui.auto_start)
     };
     let shortcuts_changed = old_shortcut != settings.shortcuts.record;
+    let auto_start_changed = old_auto_start != settings.ui.auto_start;
 
     // Update in-memory state
     {
@@ -40,6 +41,25 @@ pub async fn save_settings(
 
     // Persist to disk
     settings.save().map_err(|e| e.to_string())?;
+
+    // Sync autostart if changed
+    if auto_start_changed {
+        use tauri_plugin_autostart::ManagerExt;
+        let autostart_manager = app.autolaunch();
+        if settings.ui.auto_start {
+            if let Err(e) = autostart_manager.enable() {
+                tracing::error!("Failed to enable autostart: {}", e);
+                return Err(format!("Failed to enable autostart: {}", e));
+            }
+            tracing::info!("Autostart enabled");
+        } else {
+            if let Err(e) = autostart_manager.disable() {
+                tracing::error!("Failed to disable autostart: {}", e);
+                return Err(format!("Failed to disable autostart: {}", e));
+            }
+            tracing::info!("Autostart disabled");
+        }
+    }
 
     // Re-register shortcuts if they changed
     if shortcuts_changed {

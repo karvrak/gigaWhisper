@@ -298,12 +298,12 @@ jobs:
           $variant = "${{ matrix.variant }}"
           $releaseDir = "src-tauri/target/release/bundle/nsis"
 
-          # Read signature
+          # Read signature (normalize CRLF to LF to avoid minisign parsing errors)
           $sigFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.exe.sig"
           $signature = ""
           if (Test-Path $sigFile) {
             $signature = Get-Content $sigFile -Raw
-            $signature = $signature.Trim()
+            $signature = $signature.Trim() -replace "`r`n", "`n" -replace "`r", ""
           }
 
           # Create latest-{variant}.json
@@ -321,7 +321,7 @@ jobs:
 
           $manifestJson = $manifest | ConvertTo-Json -Depth 10
           $manifestFile = "latest-${variant}.json"
-          $manifestJson | Out-File -FilePath $manifestFile -Encoding utf8
+          [System.IO.File]::WriteAllText($manifestFile, $manifestJson, [System.Text.UTF8Encoding]::new($false))
           Write-Host "Generated $manifestFile"
           Get-Content $manifestFile
 

@@ -57,6 +57,8 @@ interface Settings {
     theme: 'system' | 'light' | 'dark';
     start_minimized: boolean;
     minimize_to_tray: boolean;
+    auto_start: boolean;
+    auto_update: boolean;
     custom_theme: string | null;
   };
   premium: {

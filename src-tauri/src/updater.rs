@@ -18,9 +18,14 @@ fn get_update_endpoint() -> String {
     )
 }
 
-/// Check for updates and emit an event if one is available
-pub async fn check_for_updates<R: Runtime>(app: AppHandle<R>) {
-    tracing::info!("Checking for updates (variant: {})...", BUILD_VARIANT);
+/// Check for updates and emit an event if one is available.
+/// If `auto_install` is true, the update is downloaded and installed automatically.
+pub async fn check_for_updates<R: Runtime>(app: AppHandle<R>, auto_install: bool) {
+    tracing::info!(
+        "Checking for updates (variant: {}, auto_install: {})...",
+        BUILD_VARIANT,
+        auto_install
+    );
     tracing::debug!("Update endpoint: {}", get_update_endpoint());
 
     let endpoint = match get_update_endpoint().parse() {
@@ -65,6 +70,13 @@ pub async fn check_for_updates<R: Runtime>(app: AppHandle<R>) {
             ) {
                 tracing::error!("Failed to emit update-available event: {}", e);
             }
+
+            if auto_install {
+                tracing::info!("Auto-install enabled, downloading and installing update...");
+                if let Err(e) = do_install_update(&app, update).await {
+                    tracing::error!("Auto-install failed: {}", e);
+                }
+            }
         }
         Ok(None) => {
             tracing::info!("Application is up to date");
@@ -85,7 +97,43 @@ pub struct UpdateInfo {
     pub variant: String,
 }
 
-/// Download and install the update
+/// Download and install update, emitting progress events
+async fn do_install_update<R: Runtime>(
+    app: &AppHandle<R>,
+    update: Update,
+) -> Result<(), String> {
+    let app_clone = app.clone();
+    let mut downloaded: usize = 0;
+
+    update
+        .download_and_install(
+            move |chunk_length, content_length: Option<u64>| {
+                downloaded += chunk_length;
+                let progress =
+                    content_length.map(|total| (downloaded as f64 / total as f64 * 100.0) as u32);
+                let _ = app_clone.emit(
+                    "update-download-progress",
+                    DownloadProgress {
+                        downloaded,
+                        total: content_length,
+                        percent: progress,
+                    },
+                );
+            },
+            || {
+                tracing::info!("Download complete, preparing to install...");
+            },
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    tracing::info!("Update installed, restart required");
+    let _ = app.emit("update-installed", ());
+
+    Ok(())
+}
+
+/// Download and install the update (called from frontend)
 #[tauri::command]
 pub async fn install_update(app: AppHandle) -> Result<(), String> {
     tracing::info!("Installing update for variant: {}", BUILD_VARIANT);
@@ -107,35 +155,7 @@ pub async fn install_update(app: AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "No update available".to_string())?;
 
-    // Emit download progress events
-    let app_clone = app.clone();
-    update
-        .download_and_install(
-            move |chunk_length, content_length: Option<u64>| {
-                let progress =
-                    content_length.map(|total| (chunk_length as f64 / total as f64 * 100.0) as u32);
-                let _ = app_clone.emit(
-                    "update-download-progress",
-                    DownloadProgress {
-                        downloaded: chunk_length,
-                        total: content_length,
-                        percent: progress,
-                    },
-                );
-            },
-            || {
-                tracing::info!("Download complete, preparing to install...");
-            },
-        )
-        .await
-        .map_err(|e| e.to_string())?;
-
-    tracing::info!("Update installed, restart required");
-
-    // Emit event to notify frontend that restart is needed
-    let _ = app.emit("update-installed", ());
-
-    Ok(())
+    do_install_update(&app, update).await
 }
 
 /// Download progress information

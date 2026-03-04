@@ -173,6 +173,52 @@ export function SettingsPanel() {
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
+                  id="auto-start"
+                  checked={settings.ui.auto_start}
+                  onChange={(e) =>
+                    updateSettings({
+                      ...settings,
+                      ui: { ...settings.ui, auto_start: e.target.checked },
+                    })
+                  }
+                  className="rounded text-indigo-600 mt-0.5"
+                />
+                <div>
+                  <label htmlFor="auto-start" className="font-medium text-sm cursor-pointer">
+                    Start with Windows
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Automatically launch GigaWhisper when you log in to Windows
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="auto-update"
+                  checked={settings.ui.auto_update}
+                  onChange={(e) =>
+                    updateSettings({
+                      ...settings,
+                      ui: { ...settings.ui, auto_update: e.target.checked },
+                    })
+                  }
+                  className="rounded text-indigo-600 mt-0.5"
+                />
+                <div>
+                  <label htmlFor="auto-update" className="font-medium text-sm cursor-pointer">
+                    Auto-update
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Automatically download and install updates without prompting
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
                   id="show-indicator"
                   checked={settings.ui.show_indicator}
                   onChange={(e) =>

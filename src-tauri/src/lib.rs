@@ -138,6 +138,10 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![]),
+        ))
         .manage(app_state)
         .setup(move |app| {
             // Setup system tray
@@ -160,12 +164,31 @@ pub fn run() {
                 }
             }
 
+            // Sync autostart state with settings
+            {
+                use tauri_plugin_autostart::ManagerExt;
+                let autostart_manager = app.autolaunch();
+                let auto_start_enabled = state.config.read().ui.auto_start;
+                let is_enabled = autostart_manager.is_enabled().unwrap_or(false);
+                if auto_start_enabled && !is_enabled {
+                    if let Err(e) = autostart_manager.enable() {
+                        tracing::error!("Failed to enable autostart: {}", e);
+                    }
+                } else if !auto_start_enabled && is_enabled {
+                    if let Err(e) = autostart_manager.disable() {
+                        tracing::error!("Failed to disable autostart: {}", e);
+                    }
+                }
+                tracing::info!("Autostart state: setting={}, system={}", auto_start_enabled, autostart_manager.is_enabled().unwrap_or(false));
+            }
+
             // Check for updates in the background
             let app_handle = app.handle().clone();
+            let auto_update = config.ui.auto_update;
             tauri::async_runtime::spawn(async move {
                 // Small delay to let the app fully initialize
                 tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-                updater::check_for_updates(app_handle).await;
+                updater::check_for_updates(app_handle, auto_update).await;
             });
 
             tracing::info!("GigaWhisper setup complete");

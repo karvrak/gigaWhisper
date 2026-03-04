@@ -706,8 +706,14 @@ pub struct UiSettings {
     pub theme: Theme,
     /// Start minimized to tray
     pub start_minimized: bool,
+    /// Auto-start with Windows
+    #[serde(default)]
+    pub auto_start: bool,
     /// Minimize to tray instead of taskbar
     pub minimize_to_tray: bool,
+    /// Automatically install updates without prompting
+    #[serde(default)]
+    pub auto_update: bool,
     /// Custom theme name (premium feature)
     #[serde(default)]
     pub custom_theme: Option<String>,
@@ -720,7 +726,9 @@ impl Default for UiSettings {
             indicator_position: IndicatorPosition::Cursor,
             theme: Theme::System,
             start_minimized: false,
+            auto_start: false,
             minimize_to_tray: true,
+            auto_update: false,
             custom_theme: None,
         }
     }

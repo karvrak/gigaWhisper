@@ -60,6 +60,8 @@ const mockSettings = {
     theme: 'system' as const,
     start_minimized: false,
     minimize_to_tray: true,
+    auto_start: false,
+    auto_update: false,
     custom_theme: null,
   },
   premium: {
