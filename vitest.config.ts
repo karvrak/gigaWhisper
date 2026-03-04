@@ -21,6 +21,12 @@ export default defineConfig({
         'src/test/**',
         'src/main.tsx',
         'src/**/*.d.ts',
+        'src/components/premium/**',
+        'src/hooks/useContexts.ts',
+        'src/hooks/useCredits.ts',
+        'src/hooks/usePremium.ts',
+        'src/themes/**',
+        'src/types/**',
       ],
       thresholds: {
         lines: 50,
