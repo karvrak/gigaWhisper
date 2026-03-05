@@ -128,36 +128,37 @@ describe('SettingsPanel', () => {
       expect(screen.getByText('Push-to-Talk')).toBeInTheDocument();
     });
 
-    it('should switch to Transcription tab when clicked', async () => {
+    it('should switch to Transcription tab when selected', async () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Transcription'));
+      const tabSelect = screen.getByTestId('tab-selector');
+      await user.selectOptions(tabSelect, 'transcription');
 
       // Should show transcription settings
       expect(screen.getByText('Language')).toBeInTheDocument();
       expect(screen.getByText('Whisper Model')).toBeInTheDocument();
     });
 
-    it('should switch to Audio tab when clicked', async () => {
+    it('should switch to Audio tab when selected', async () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Audio'));
+      const tabSelect = screen.getByTestId('tab-selector');
+      await user.selectOptions(tabSelect, 'audio');
 
       // Should show audio settings
       expect(screen.getByText('Input Device')).toBeInTheDocument();
     });
 
-    it('should highlight active tab', async () => {
+    it('should have correct value after tab change', async () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      const transcriptionTab = screen.getByText('Transcription');
-      await user.click(transcriptionTab);
+      const tabSelect = screen.getByTestId('tab-selector');
+      await user.selectOptions(tabSelect, 'transcription');
 
-      // The tab should have active styling (text-indigo-600 class)
-      expect(transcriptionTab).toHaveClass('text-indigo-600');
+      expect(tabSelect).toHaveValue('transcription');
     });
   });
 
@@ -255,7 +256,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Transcription'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'transcription');
 
       expect(screen.getByText('Language')).toBeInTheDocument();
       // Multiple comboboxes exist (language, model), just check at least one exists
@@ -266,7 +267,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Transcription'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'transcription');
 
       expect(screen.getByText('GPU Acceleration')).toBeInTheDocument();
     });
@@ -275,7 +276,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Transcription'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'transcription');
 
       // Should show model selector for local provider
       expect(screen.getByText('Whisper Model')).toBeInTheDocument();
@@ -286,7 +287,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Transcription'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'transcription');
 
       expect(screen.getByText('GPU Acceleration')).toBeInTheDocument();
     });
@@ -295,7 +296,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Transcription'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'transcription');
 
       // Find the language select by its label association
       screen.getByText('Language');
@@ -328,7 +329,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Audio'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'audio');
 
       expect(screen.getByText('Input Device')).toBeInTheDocument();
     });
@@ -337,7 +338,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Audio'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'audio');
 
       expect(screen.getByText('Default Microphone')).toBeInTheDocument();
     });
@@ -346,7 +347,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Audio'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'audio');
 
       expect(screen.getByText('Auto-capitalize first letter')).toBeInTheDocument();
     });
@@ -355,7 +356,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Audio'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'audio');
 
       expect(screen.getByText('Auto-punctuation')).toBeInTheDocument();
     });
@@ -364,7 +365,7 @@ describe('SettingsPanel', () => {
       const user = userEvent.setup();
       render(<SettingsPanel />);
 
-      await user.click(screen.getByText('Audio'));
+      await user.selectOptions(screen.getByTestId('tab-selector'), 'audio');
 
       const checkbox = screen.getByLabelText('Auto-capitalize first letter');
       await user.click(checkbox);
