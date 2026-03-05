@@ -1,131 +1,210 @@
+<div align="center">
+
 # GigaWhisper
 
-**Free, open-source voice dictation for Windows** — Type with your voice in any application.
+**Type with your voice in any Windows app — free, open-source, privacy-first.**
 
+[![GitHub stars](https://img.shields.io/github/stars/karvrak/gigaWhisper?style=flat&logo=github)](https://github.com/karvrak/gigaWhisper/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://github.com/karvrak/gigaWhisper/releases)
-[![Tauri](https://img.shields.io/badge/Built%20with-Tauri-FFC131?logo=tauri)](https://tauri.app/)
-[![codecov](https://codecov.io/gh/karvrak/gigaWhisper/graph/badge.svg)](https://codecov.io/gh/karvrak/gigaWhisper)
+[![Latest Release](https://img.shields.io/github/v/release/karvrak/gigaWhisper?color=brightgreen&logo=github)](https://github.com/karvrak/gigaWhisper/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/karvrak/gigaWhisper/total?color=purple&logo=github)](https://github.com/karvrak/gigaWhisper/releases)
 [![CI](https://github.com/karvrak/gigaWhisper/actions/workflows/ci.yml/badge.svg)](https://github.com/karvrak/gigaWhisper/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/karvrak/gigaWhisper/graph/badge.svg)](https://codecov.io/gh/karvrak/gigaWhisper)
 
-> A lightweight, privacy-focused alternative to SuperWhisper. Powered by OpenAI Whisper for accurate speech-to-text, running locally or in the cloud.
+<br/>
+
+<!-- Replace with your actual demo GIF or video -->
+<!-- To record: use OBS or ScreenToGif, export as .gif, upload to repo or imgur -->
+<img src="docs/assets/demo.gif" alt="GigaWhisper Demo" width="720"/>
+
+<br/>
+
+*Press a hotkey, speak, and your words appear instantly — in Word, Chrome, VS Code, Slack, anywhere.*
+
+[**Download**](https://github.com/karvrak/gigaWhisper/releases/latest) · [**Documentation**](docs/ARCHITECTURE.md) · [**Report Bug**](https://github.com/karvrak/gigaWhisper/issues) · [**Request Feature**](https://github.com/karvrak/gigaWhisper/issues)
+
+</div>
+
+---
 
 ## Why GigaWhisper?
 
-- **100% Free & Open Source** — No subscriptions, no hidden costs
-- **Privacy First** — Run entirely offline with local AI transcription
-- **Lightweight** — Only ~10MB installer, minimal CPU/RAM usage
-- **Universal** — Works in any Windows application (Word, Chrome, VS Code, etc.)
+<table>
+<tr>
+<td width="50%">
 
-## Features
+### 🔒 Privacy First
+Run 100% offline with local Whisper models. Your voice never leaves your machine.
 
-- **Global Hotkey**: Press Ctrl+Space to start dictating
-- **Push-to-Talk or Toggle**: Choose your preferred recording mode
-- **Local Transcription**: Run whisper.cpp on your machine (private, offline)
-- **Cloud Transcription**: Use Groq API for fast, high-quality results
-- **Auto-Paste**: Text is automatically pasted into the active field
-- **Lightweight**: ~10MB installer, minimal resource usage
+### ⚡ Lightning Fast
+GPU-accelerated transcription via Vulkan or CUDA. Cloud options (Groq, Deepgram, OpenAI) for near-instant results.
+
+### 🎯 Works Everywhere
+Auto-pastes into any active window — Word, Chrome, VS Code, Slack, Discord, terminal, you name it.
+
+</td>
+<td width="50%">
+
+### 💸 Free & Open Source
+No subscriptions, no usage limits, no telemetry. MIT licensed forever.
+
+### 🎙️ Flexible Recording
+Push-to-Talk or Toggle mode. Configurable hotkeys including mouse buttons (Mouse4/Mouse5).
+
+### 🧠 Smart Processing
+Voice Activity Detection filters silence. Choose from Tiny to Large whisper models based on your hardware.
+
+</td>
+</tr>
+</table>
+
+---
+
+## GigaWhisper vs Alternatives
+
+| Feature | **GigaWhisper** | SuperWhisper | Dragon | Wispr Flow |
+|---|:---:|:---:|:---:|:---:|
+| **Price** | **Free** | $8-16/mo | $500+ | $8/mo |
+| **Open Source** | **Yes (MIT)** | No | No | No |
+| **Offline Mode** | **Yes** | Yes | Yes | No |
+| **Cloud Transcription** | **Yes (4 providers)** | Limited | No | Yes |
+| **GPU Acceleration** | **Vulkan + CUDA** | Metal | — | — |
+| **Windows Support** | **Yes** | macOS only | Yes | macOS only |
+| **Auto-Paste** | **Yes** | Yes | Yes | Yes |
+| **Push-to-Talk + Toggle** | **Both** | Both | Push only | Toggle only |
+| **Mouse Button Shortcuts** | **Yes** | No | No | No |
+| **Custom Hotkeys** | **Full** | Limited | Limited | Limited |
+| **Transcription History** | **Yes** | No | Yes | No |
+
+---
 
 ## Installation
 
-### From Release
+### Quick Install (recommended)
 
-Download the latest installer from [Releases](https://github.com/karvrak/gigaWhisper/releases).
+1. Download the latest `.msi` or `.exe` installer from [**Releases**](https://github.com/karvrak/gigaWhisper/releases/latest)
+2. Run the installer
+3. Launch GigaWhisper — it starts in the system tray
+4. Press `Ctrl+Space` and start talking
 
 ### Build from Source
 
-#### Prerequisites
-
-- [Rust](https://rustup.rs/) (1.70+)
-- [Node.js](https://nodejs.org/) (18+)
-- [pnpm](https://pnpm.io/) (8+)
-
-#### Steps
+**Prerequisites:** [Rust 1.70+](https://rustup.rs/) · [Node.js 18+](https://nodejs.org/) · [pnpm 8+](https://pnpm.io/)
 
 ```bash
-# Clone the repository
 git clone https://github.com/karvrak/gigaWhisper.git
-cd gigawhisper
+cd gigaWhisper
 
-# Install frontend dependencies
-pnpm install
-
-# Run in development mode
-pnpm tauri dev
-
-# Build for production
-pnpm tauri build
+pnpm install          # Install frontend dependencies
+pnpm tauri dev        # Run in development mode
+pnpm tauri build      # Build for production
 ```
 
-## Usage
+**GPU builds:**
 
-1. **Start GigaWhisper** - It will minimize to the system tray
-2. **Configure** - Click the tray icon to open settings
-3. **Record** - Press `Ctrl+Space` (default) to start recording
-4. **Speak** - Your voice will be transcribed
-5. **Auto-paste** - Text appears in the active field
+```bash
+cargo build --features gpu-vulkan   # AMD / Intel / NVIDIA
+cargo build --features gpu-cuda     # NVIDIA (best performance)
+```
 
-### Recording Modes
+---
 
-- **Push-to-Talk**: Hold the hotkey while speaking, release to transcribe
-- **Toggle**: Press once to start, press again to stop and transcribe
+## Quick Start
+
+1. **Launch** — GigaWhisper minimizes to your system tray
+2. **Configure** — Click the tray icon to pick a transcription provider and model
+3. **Record** — Press `Ctrl+Space` (default hotkey)
+4. **Speak** — Talk naturally, GigaWhisper handles the rest
+5. **Done** — Transcribed text is auto-pasted into your active window
 
 ### Transcription Providers
 
-#### Local (whisper.cpp)
+| Provider | Type | Speed | Setup |
+|----------|------|-------|-------|
+| **whisper.cpp** | Local | Depends on model & GPU | Download a model in Settings |
+| **Groq** | Cloud | Very fast | Free API key from [console.groq.com](https://console.groq.com) |
+| **Deepgram** | Cloud | Very fast | API key from [deepgram.com](https://deepgram.com) |
+| **OpenAI** | Cloud | Fast | API key from [platform.openai.com](https://platform.openai.com) |
 
-Runs entirely on your machine. Choose a model based on your hardware:
+### Local Whisper Models
 
-| Model | Size | Speed | Quality |
-|-------|------|-------|---------|
-| Tiny | 75 MB | Fastest | Basic |
-| Base | 142 MB | Fast | Good |
-| Small | 466 MB | Moderate | Better |
-| Medium | 1.5 GB | Slow | Great |
-| Large | 2.9 GB | Slowest | Best |
+| Model | Size | Quality | Best for |
+|-------|------|---------|----------|
+| Tiny | 75 MB | Basic | Quick notes, low-end hardware |
+| Base | 142 MB | Good | Everyday use |
+| Small | 466 MB | Better | Accuracy-focused |
+| Medium | 1.5 GB | Great | Professional use |
+| Large | 2.9 GB | Best | Maximum accuracy |
 
-#### Cloud (Groq)
+---
 
-Fast cloud transcription using Groq's Whisper API:
+## Tech Stack
 
-1. Get an API key from [console.groq.com](https://console.groq.com)
-2. Enter your key in Settings > Transcription
-3. Select "Groq Cloud" as provider
+| Layer | Technology |
+|-------|-----------|
+| Desktop Framework | [Tauri v2](https://tauri.app/) |
+| Backend | Rust |
+| Frontend | React + TypeScript + Tailwind CSS |
+| Local STT | [whisper-rs](https://github.com/tazz4843/whisper-rs) (whisper.cpp bindings) |
+| Audio | cpal + webrtc-vad |
+| GPU | Vulkan / CUDA |
 
-## Keyboard Shortcuts
-
-| Action | Default | Configurable |
-|--------|---------|--------------|
-| Record | Ctrl+Space | Yes |
-| Cancel | Escape | Yes |
-| Settings | Ctrl+Shift+W | Yes |
-
-## Configuration
-
-Settings are stored in:
-- Windows: `%APPDATA%\GigaWhisper\config\settings.toml`
-
-## Architecture
-
-Built with:
-- **[Tauri v2](https://tauri.app/)** - Rust-based desktop framework
-- **[whisper-rs](https://github.com/tazz4843/whisper-rs)** - Rust bindings for whisper.cpp
-- **[React](https://react.dev/)** - UI framework
-- **[Tailwind CSS](https://tailwindcss.com/)** - Styling
-
-See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
+---
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines first.
+Contributions are welcome! Here's how to get started:
+
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feat/my-feature`
+3. **Commit** your changes: `git commit -m "feat: add my feature"`
+4. **Push** to your fork: `git push origin feat/my-feature`
+5. **Open** a Pull Request
+
+### Guidelines
+
+- Follow the existing code style (Rust: `cargo fmt` + `cargo clippy`, TS: ESLint + Prettier)
+- Add tests for new features
+- Keep PRs focused — one feature or fix per PR
+- Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages
+
+### Development Setup
+
+```bash
+git clone https://github.com/karvrak/gigaWhisper.git
+cd gigaWhisper
+pnpm install
+pnpm tauri dev
+```
+
+Run tests:
+
+```bash
+pnpm test              # Frontend tests (Vitest)
+cd src-tauri && cargo test   # Backend tests (Rust)
+```
+
+---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
 
 ## Acknowledgments
 
-- [OpenAI Whisper](https://github.com/openai/whisper) - The underlying model
-- [whisper.cpp](https://github.com/ggerganov/whisper.cpp) - C++ implementation
-- [Groq](https://groq.com/) - Fast cloud inference
-- [SuperWhisper](https://superwhisper.com/) - Inspiration
+- [OpenAI Whisper](https://github.com/openai/whisper) — the underlying speech recognition model
+- [whisper.cpp](https://github.com/ggerganov/whisper.cpp) — high-performance C++ implementation
+- [Groq](https://groq.com/) · [Deepgram](https://deepgram.com/) · [OpenAI](https://openai.com/) — cloud transcription providers
+- [SuperWhisper](https://superwhisper.com/) — inspiration for the project
+
+---
+
+<div align="center">
+
+**If GigaWhisper saves you time, consider giving it a ⭐ on GitHub!**
+
+[⬆ Back to top](#gigawhisper)
+
+</div>
