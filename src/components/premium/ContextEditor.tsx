@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { HotkeyInput } from '../HotkeyInput';
-import { Save, ArrowLeft } from 'lucide-react';
-import type { TranscriptionContext } from '../../types/premium';
+import { Save, ArrowLeft, Sparkles } from 'lucide-react';
+import type { TranscriptionContext, ContextPostProcessing } from '../../types/premium';
 
 interface ProviderAvailability {
   groq: boolean;
@@ -132,6 +132,68 @@ export function ContextEditor({ context, onSave, onCancel, providerAvailability 
               )}
             </div>
           </div>
+        </div>
+
+        {/* Post-Processing */}
+        <div className="border border-edge rounded-lg p-3 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-violet-500" />
+            <span className="text-xs font-medium">AI Post-Processing</span>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="ctx-pp-enabled"
+              checked={ctx.post_processing?.enabled ?? false}
+              onChange={(e) => {
+                const pp: ContextPostProcessing = ctx.post_processing ?? {
+                  enabled: false,
+                  llm_provider: 'groq-llm',
+                  system_prompt: 'Clean up and fix any errors in this transcription. Keep the original meaning and tone. Output only the corrected text.',
+                };
+                setCtx({ ...ctx, post_processing: { ...pp, enabled: e.target.checked } });
+              }}
+              className="rounded mt-0.5"
+            />
+            <label htmlFor="ctx-pp-enabled" className="text-xs text-content-secondary cursor-pointer">
+              Enable post-processing for this context
+            </label>
+          </div>
+
+          {ctx.post_processing?.enabled && (
+            <>
+              <div>
+                <label className="block text-xs font-medium mb-1">LLM Provider</label>
+                <select
+                  value={ctx.post_processing.llm_provider}
+                  onChange={(e) => setCtx({
+                    ...ctx,
+                    post_processing: { ...ctx.post_processing!, llm_provider: e.target.value as ContextPostProcessing['llm_provider'] },
+                  })}
+                  className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
+                >
+                  <option value="groq-llm">Groq (Llama - Fast)</option>
+                  <option value="open-ai">OpenAI (GPT-4o-mini)</option>
+                  <option value="anthropic">Anthropic (Claude Haiku)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">System Prompt</label>
+                <textarea
+                  value={ctx.post_processing.system_prompt}
+                  onChange={(e) => setCtx({
+                    ...ctx,
+                    post_processing: { ...ctx.post_processing!, system_prompt: e.target.value },
+                  })}
+                  rows={4}
+                  placeholder="Instructions for the AI on how to process the transcription..."
+                  className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm resize-none"
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

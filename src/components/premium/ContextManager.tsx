@@ -4,8 +4,9 @@ import { usePremium } from '../../hooks/usePremium';
 import { useSettings } from '../../hooks/useSettings';
 import { PremiumBadge } from './PremiumBadge';
 import { ContextEditor } from './ContextEditor';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import type { TranscriptionContext } from '../../types/premium';
+import { CONTEXT_PRESETS } from '../../types/contextPresets';
 
 export function ContextManager() {
   const { contexts, saveContext, deleteContext } = useContexts();
@@ -18,20 +19,27 @@ export function ContextManager() {
   } : { groq: false, openai: false, deepgram: false };
   const canUseContexts = isFeatureAvailable('multi-context');
   const [editingContext, setEditingContext] = useState<TranscriptionContext | null>(null);
+  const [showPresetPicker, setShowPresetPicker] = useState(false);
 
   const handleAdd = () => {
     if (!canUseContexts) return;
+    setShowPresetPicker(true);
+  };
+
+  const handlePickPreset = (presetKey: string | null) => {
+    const preset = presetKey ? CONTEXT_PRESETS.find((p) => p.key === presetKey) : null;
     const newCtx: TranscriptionContext = {
       id: crypto.randomUUID(),
-      name: '',
+      name: preset?.name ?? '',
       shortcut: '',
-      language: 'auto',
-      provider: 'local',
+      language: preset?.language ?? 'auto',
+      provider: preset?.provider ?? 'local',
       model: null,
-      post_processing: null,
-      color: null,
-      icon: null,
+      post_processing: preset?.postProcessing ?? null,
+      color: preset?.color ?? null,
+      icon: preset?.icon ?? null,
     };
+    setShowPresetPicker(false);
     setEditingContext(newCtx);
   };
 
@@ -44,6 +52,57 @@ export function ContextManager() {
     if (!confirm('Delete this context?')) return;
     await deleteContext(id);
   };
+
+  if (showPresetPicker) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowPresetPicker(false)} className="p-1 hover:bg-surface-tertiary rounded">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <h3 className="text-sm font-medium">New Context</h3>
+        </div>
+
+        <p className="text-xs text-content-secondary">
+          Start from a preset or create a blank context.
+        </p>
+
+        <div className="space-y-2">
+          {CONTEXT_PRESETS.map((preset) => (
+            <button
+              key={preset.key}
+              onClick={() => handlePickPreset(preset.key)}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-edge hover:border-accent/50 hover:bg-accent/5 transition-colors text-left"
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-lg shrink-0"
+                style={{ backgroundColor: preset.color + '20' }}
+              >
+                {preset.icon}
+              </div>
+              <div className="min-w-0">
+                <div className="font-medium text-sm">{preset.name}</div>
+                <div className="text-xs text-content-secondary">{preset.description}</div>
+              </div>
+            </button>
+          ))}
+
+          <button
+            onClick={() => handlePickPreset(null)}
+            className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed border-edge hover:border-accent/50 hover:bg-accent/5 transition-colors text-left"
+          >
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg shrink-0 bg-surface-tertiary">
+              <Plus className="w-4 h-4 text-content-tertiary" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-medium text-sm">Blank Context</div>
+              <div className="text-xs text-content-secondary">Start from scratch</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (editingContext) {
     return (

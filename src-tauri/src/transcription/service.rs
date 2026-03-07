@@ -299,11 +299,20 @@ impl TranscriptionService {
                 // Override transcription settings with context-specific values
                 cfg.transcription.language = ctx.language.clone();
                 cfg.transcription.provider = ctx.provider.clone();
+
+                // Override post-processing with context-specific settings
+                if let Some(ref pp) = ctx.post_processing {
+                    cfg.post_processing.enabled = pp.enabled;
+                    cfg.post_processing.default_provider = pp.llm_provider.clone();
+                    cfg.post_processing.default_prompt = pp.system_prompt.clone();
+                }
+
                 tracing::info!(
-                    "Using context '{}': language={}, provider={:?}",
+                    "Using context '{}': language={}, provider={:?}, post_processing={:?}",
                     ctx.name,
                     ctx.language,
-                    ctx.provider
+                    ctx.provider,
+                    ctx.post_processing.as_ref().map(|p| p.enabled),
                 );
             }
             cfg
