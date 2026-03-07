@@ -84,6 +84,27 @@ jobs:
             ---
             *Full changelog: [CHANGELOG.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CHANGELOG.md)*`;
 
+            // Check if a release already exists for this tag
+            try {
+              const { data: existing } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: `v${version}`
+              });
+              // Update the existing release back to draft and refresh its body
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: existing.id,
+                body: body,
+                draft: true,
+                prerelease: false
+              });
+              return existing.id;
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }
+
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
