@@ -261,18 +261,30 @@ jobs:
             Write-Host "Renaming to: $newName"
             Move-Item $nsisFile.FullName $newPath -Force
             Write-Host "Renamed successfully"
-
-            # Also rename the signature file
-            $sigFile = "$($nsisFile.FullName).sig"
-            if (Test-Path $sigFile) {
-              Move-Item $sigFile "$newPath.sig" -Force
-              Write-Host "Renamed signature file"
-            }
           } else {
             Write-Host "ERROR: No NSIS installer found!"
             Write-Host "Available .exe files:"
             Get-ChildItem -Path $releaseDir -Filter "*.exe" | ForEach-Object { Write-Host "  $($_.Name)" }
             exit 1
+          }
+
+          # Find the .nsis.zip updater bundle and its signature (Tauri v2 generates .nsis.zip.sig, not .exe.sig)
+          $nsisZip = Get-ChildItem -Path $releaseDir -Filter "*.nsis.zip" | Where-Object { $_.Name -notmatch "-cpu-|-vulkan-|-cuda-" } | Select-Object -First 1
+          if ($nsisZip) {
+            $newZipName = "GigaWhisper_${version}_x64-${variant}-setup.nsis.zip"
+            $newZipPath = Join-Path $releaseDir $newZipName
+            Move-Item $nsisZip.FullName $newZipPath -Force
+            Write-Host "Renamed updater bundle: $newZipName"
+
+            $sigFile = "$($nsisZip.FullName).sig"
+            if (Test-Path $sigFile) {
+              Move-Item $sigFile "$newZipPath.sig" -Force
+              Write-Host "Renamed updater signature file"
+            } else {
+              Write-Host "WARNING: No .nsis.zip.sig found at $sigFile"
+            }
+          } else {
+            Write-Host "WARNING: No .nsis.zip updater bundle found"
           }
 
       # Upload renamed artifacts to release
@@ -302,13 +314,13 @@ jobs:
             exit 1
           }
 
-          # Upload signature
-          $sigFile = "$exeFile.sig"
-          if (Test-Path $sigFile) {
-            gh release upload "v${version}" $sigFile --clobber
-            Write-Host "Uploaded signature: $sigFile"
+          # Upload updater bundle (.nsis.zip) for auto-update
+          $nsisZipFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.nsis.zip"
+          if (Test-Path $nsisZipFile) {
+            gh release upload "v${version}" $nsisZipFile --clobber
+            Write-Host "Uploaded updater bundle: $nsisZipFile"
           } else {
-            Write-Host "Warning: Signature file not found: $sigFile"
+            Write-Host "Warning: Updater bundle not found: $nsisZipFile"
           }
 
       # Generate latest-{variant}.json
@@ -319,15 +331,22 @@ jobs:
           $variant = "${{ matrix.variant }}"
           $releaseDir = "src-tauri/target/release/bundle/nsis"
 
-          # Read signature (normalize CRLF to LF to avoid minisign parsing errors)
-          $sigFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.exe.sig"
+          # Read signature from .nsis.zip.sig (Tauri v2 signs the .nsis.zip updater bundle, not the .exe)
+          $sigFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.nsis.zip.sig"
           $signature = ""
           if (Test-Path $sigFile) {
             $signature = Get-Content $sigFile -Raw
+            # Normalize CRLF to LF to avoid minisign parsing errors
             $signature = $signature.Trim() -replace "`r`n", "`n" -replace "`r", ""
+            Write-Host "Signature loaded from $sigFile"
+          } else {
+            Write-Host "ERROR: Signature file not found: $sigFile"
+            Write-Host "Available files:"
+            Get-ChildItem -Path $releaseDir | ForEach-Object { Write-Host "  $($_.Name)" }
+            exit 1
           }
 
-          # Create latest-{variant}.json
+          # Create latest-{variant}.json (URL points to .nsis.zip updater bundle, not .exe)
           $manifest = @{
             version = $version
             notes = "GigaWhisper v${version} (${variant})"
@@ -335,7 +354,7 @@ jobs:
             platforms = @{
               "windows-x86_64" = @{
                 signature = $signature
-                url = "https://github.com/${{ github.repository }}/releases/download/v${version}/GigaWhisper_${version}_x64-${variant}-setup.exe"
+                url = "https://github.com/${{ github.repository }}/releases/download/v${version}/GigaWhisper_${version}_x64-${variant}-setup.nsis.zip"
               }
             }
           }

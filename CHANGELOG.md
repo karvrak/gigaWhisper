@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-03-07
+
+### Fixed
+- **Auto-update broken: "Invalid encoding in minisign data"** — release workflow was looking for `.exe.sig` but Tauri v2 generates `.nsis.zip.sig` for the updater bundle, resulting in empty signatures in update manifests
+
 ## [1.0.9] - 2026-03-07
 
 ### Fixed
