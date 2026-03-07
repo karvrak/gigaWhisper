@@ -132,10 +132,14 @@ impl SecretsManager {
     pub fn validate_openai_api_key(api_key: &str) -> Result<(), SecretsError> {
         let api_key = api_key.trim();
         if api_key.is_empty() {
-            return Err(SecretsError::InvalidFormat("API key cannot be empty".to_string()));
+            return Err(SecretsError::InvalidFormat(
+                "API key cannot be empty".to_string(),
+            ));
         }
         if api_key.len() > 200 {
-            return Err(SecretsError::InvalidFormat("API key is too long".to_string()));
+            return Err(SecretsError::InvalidFormat(
+                "API key is too long".to_string(),
+            ));
         }
         if !api_key.starts_with("sk-") {
             return Err(SecretsError::InvalidFormat(
@@ -167,13 +171,19 @@ impl SecretsManager {
     pub fn validate_deepgram_api_key(api_key: &str) -> Result<(), SecretsError> {
         let api_key = api_key.trim();
         if api_key.is_empty() {
-            return Err(SecretsError::InvalidFormat("API key cannot be empty".to_string()));
+            return Err(SecretsError::InvalidFormat(
+                "API key cannot be empty".to_string(),
+            ));
         }
         if api_key.len() > 200 {
-            return Err(SecretsError::InvalidFormat("API key is too long".to_string()));
+            return Err(SecretsError::InvalidFormat(
+                "API key is too long".to_string(),
+            ));
         }
         if api_key.len() < 10 {
-            return Err(SecretsError::InvalidFormat("API key is too short".to_string()));
+            return Err(SecretsError::InvalidFormat(
+                "API key is too short".to_string(),
+            ));
         }
         Ok(())
     }
@@ -200,10 +210,14 @@ impl SecretsManager {
     pub fn validate_anthropic_api_key(api_key: &str) -> Result<(), SecretsError> {
         let api_key = api_key.trim();
         if api_key.is_empty() {
-            return Err(SecretsError::InvalidFormat("API key cannot be empty".to_string()));
+            return Err(SecretsError::InvalidFormat(
+                "API key cannot be empty".to_string(),
+            ));
         }
         if api_key.len() > 200 {
-            return Err(SecretsError::InvalidFormat("API key is too long".to_string()));
+            return Err(SecretsError::InvalidFormat(
+                "API key is too long".to_string(),
+            ));
         }
         if !api_key.starts_with("sk-ant-") {
             return Err(SecretsError::InvalidFormat(

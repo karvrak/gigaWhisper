@@ -38,7 +38,10 @@ impl DeepgramProvider {
         let api_key = match SecretsManager::get_secret(SECRET_NAME) {
             Ok(key) => Some(key),
             Err(e) => {
-                tracing::warn!("Failed to read Deepgram API key from credential store: {}", e);
+                tracing::warn!(
+                    "Failed to read Deepgram API key from credential store: {}",
+                    e
+                );
                 None
             }
         };

@@ -96,7 +96,11 @@ impl TranscriptionHistory {
             if let Some(evicted) = self.entries.pop_back() {
                 if let Some(ref audio_path) = evicted.audio_path {
                     if let Err(e) = std::fs::remove_file(audio_path) {
-                        tracing::debug!("Failed to remove evicted audio file '{}': {}", audio_path, e);
+                        tracing::debug!(
+                            "Failed to remove evicted audio file '{}': {}",
+                            audio_path,
+                            e
+                        );
                     } else {
                         tracing::debug!("Cleaned up evicted audio file: {}", audio_path);
                     }
@@ -237,7 +241,11 @@ fn cleanup_orphaned_audio(history: &TranscriptionHistory) {
                 freed_bytes += metadata.len();
             }
             if let Err(e) = std::fs::remove_file(&path) {
-                tracing::warn!("Failed to remove orphaned audio file '{}': {}", path.display(), e);
+                tracing::warn!(
+                    "Failed to remove orphaned audio file '{}': {}",
+                    path.display(),
+                    e
+                );
             } else {
                 cleaned += 1;
             }
