@@ -229,15 +229,49 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
+      - name: Verify signing key is available
+        shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            Write-Host "::error::TAURI_SIGNING_PRIVATE_KEY secret is not set. The updater bundle (.nsis.zip) and signature (.sig) will not be generated without it."
+            Write-Host "To fix: generate a key pair with 'npx tauri signer generate' and add the private key as a repository secret."
+            exit 1
+          }
+          Write-Host "Signing key is available"
+
+      - name: Build Tauri App
+        shell: bash
+        env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          # Don't use releaseId to prevent auto-upload (we rename and upload manually)
-          args: ${{ matrix.features }}
+        run: pnpm tauri build ${{ matrix.features }}
+
+      - name: Verify build artifacts
+        shell: pwsh
+        run: |
+          $releaseDir = "src-tauri/target/release/bundle/nsis"
+          Write-Host "Build artifacts in ${releaseDir}:"
+          Get-ChildItem -Path $releaseDir | ForEach-Object { Write-Host "  $($_.Name) ($([math]::Round($_.Length / 1MB, 2)) MB)" }
+
+          $hasExe = (Get-ChildItem -Path $releaseDir -Filter "*.exe").Count -gt 0
+          $hasZip = (Get-ChildItem -Path $releaseDir -Filter "*.nsis.zip").Count -gt 0
+          $hasSig = (Get-ChildItem -Path $releaseDir -Filter "*.nsis.zip.sig").Count -gt 0
+
+          if (-not $hasExe) {
+            Write-Host "::error::No .exe installer found"
+            exit 1
+          }
+          if (-not $hasZip) {
+            Write-Host "::error::No .nsis.zip updater bundle found. This usually means the signing key is invalid or the updater plugin is misconfigured."
+            exit 1
+          }
+          if (-not $hasSig) {
+            Write-Host "::error::No .nsis.zip.sig signature file found"
+            exit 1
+          }
+          Write-Host "All required artifacts present"
 
       # Rename artifacts to include variant
       - name: Rename artifacts
