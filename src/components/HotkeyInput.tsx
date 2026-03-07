@@ -86,17 +86,17 @@ export function HotkeyInput({ value, onChange }: HotkeyInputProps) {
         ref={inputRef}
         className={`flex-1 px-3 py-2 border rounded-md flex items-center gap-2 cursor-pointer ${
           isRecording
-            ? 'border-indigo-500 ring-2 ring-indigo-200 dark:ring-indigo-800'
-            : 'border-gray-300 dark:border-violet-500/20'
-        } bg-white dark:bg-[#252136]`}
+            ? 'border-accent ring-2 ring-accent/30'
+            : 'border-edge'
+        } bg-surface-tertiary`}
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onMouseDown={handleMouseDown}
         onFocus={() => setIsRecording(true)}
         onBlur={() => setIsRecording(false)}
       >
-        <Keyboard className="w-4 h-4 text-gray-400" />
-        <span className={isRecording ? 'text-indigo-600 dark:text-indigo-400' : ''}>
+        <Keyboard className="w-4 h-4 text-content-tertiary" />
+        <span className={isRecording ? 'text-accent' : ''}>
           {isRecording ? 'Press shortcut or mouse button...' : value}
         </span>
       </div>
@@ -105,7 +105,7 @@ export function HotkeyInput({ value, onChange }: HotkeyInputProps) {
           e.preventDefault(); // Prevent stealing focus from the input
           startRecording();
         }}
-        className="px-3 py-2 border border-gray-300 dark:border-violet-500/20 rounded-md hover:bg-gray-50 dark:hover:bg-[#252136] text-sm"
+        className="px-3 py-2 border border-edge rounded-md hover:bg-surface-tertiary text-sm"
       >
         Change
       </button>

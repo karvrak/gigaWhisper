@@ -9,31 +9,50 @@ interface ThemeSelectorProps {
   onChange: (themeId: string | null) => void;
 }
 
+/** Convert hex color (#RRGGBB) to space-separated RGB values (e.g. "26 23 37") */
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `${r} ${g} ${b}`;
+}
+
 function applyCustomTheme(theme: ThemeDefinition | null) {
   const root = document.documentElement;
   if (!theme) {
-    // Remove custom properties
+    // Remove custom properties — restore defaults by unsetting overrides
     root.removeAttribute('data-custom-theme');
+    const props = [
+      '--color-bg-primary', '--color-bg-secondary', '--color-bg-tertiary',
+      '--color-text-primary', '--color-text-secondary', '--color-text-tertiary', '--color-text-muted',
+      '--color-border-default', '--color-border-hover',
+      '--color-accent-primary', '--color-accent-hover', '--color-accent-subtle',
+      '--color-success', '--color-error',
+    ];
+    props.forEach((p) => root.style.removeProperty(p));
     return;
   }
 
   root.setAttribute('data-custom-theme', theme.id);
+  // All premium themes are dark — ensure dark class is applied
+  root.classList.add('dark');
   const { colors } = theme;
-  root.style.setProperty('--bg-primary', colors.bgPrimary);
-  root.style.setProperty('--bg-secondary', colors.bgSecondary);
-  root.style.setProperty('--bg-card', colors.bgCard);
-  root.style.setProperty('--bg-input', colors.bgInput);
-  root.style.setProperty('--text-primary', colors.textPrimary);
-  root.style.setProperty('--text-secondary', colors.textSecondary);
-  root.style.setProperty('--text-muted', colors.textMuted);
-  root.style.setProperty('--accent-primary', colors.accentPrimary);
-  root.style.setProperty('--accent-secondary', colors.accentSecondary);
-  root.style.setProperty('--accent-hover', colors.accentHover);
-  root.style.setProperty('--border-default', colors.borderDefault);
-  root.style.setProperty('--border-hover', colors.borderHover);
-  root.style.setProperty('--color-success', colors.success);
-  root.style.setProperty('--color-warning', colors.warning);
-  root.style.setProperty('--color-error', colors.error);
+  // Map theme colors to the CSS custom properties used by globals.css (RGB values)
+  root.style.setProperty('--color-bg-primary', hexToRgb(colors.bgPrimary));
+  root.style.setProperty('--color-bg-secondary', hexToRgb(colors.bgSecondary));
+  root.style.setProperty('--color-bg-tertiary', hexToRgb(colors.bgInput));
+  root.style.setProperty('--color-text-primary', hexToRgb(colors.textPrimary));
+  root.style.setProperty('--color-text-secondary', hexToRgb(colors.textSecondary));
+  root.style.setProperty('--color-text-tertiary', hexToRgb(colors.textMuted));
+  root.style.setProperty('--color-text-muted', hexToRgb(colors.textMuted));
+  root.style.setProperty('--color-border-default', hexToRgb(colors.borderDefault));
+  root.style.setProperty('--color-border-hover', hexToRgb(colors.borderHover));
+  root.style.setProperty('--color-accent-primary', hexToRgb(colors.accentPrimary));
+  root.style.setProperty('--color-accent-hover', hexToRgb(colors.accentHover));
+  root.style.setProperty('--color-accent-subtle', hexToRgb(colors.bgCard));
+  root.style.setProperty('--color-success', hexToRgb(colors.success));
+  root.style.setProperty('--color-error', hexToRgb(colors.error));
 }
 
 export function ThemeSelector({ currentTheme, onChange }: ThemeSelectorProps) {
@@ -61,8 +80,8 @@ export function ThemeSelector({ currentTheme, onChange }: ThemeSelectorProps) {
             disabled={!canUseThemes}
             className={`relative p-2 rounded-lg border-2 transition-all text-center ${
               currentTheme === theme.id
-                ? 'border-indigo-500 shadow-md'
-                : 'border-gray-200 dark:border-violet-500/15 hover:border-gray-300'
+                ? 'border-accent shadow-md'
+                : 'border-edge hover:border-edge-hover'
             } ${!canUseThemes ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             {/* Color preview */}
@@ -73,7 +92,7 @@ export function ThemeSelector({ currentTheme, onChange }: ThemeSelectorProps) {
             </div>
             <span className="text-xs font-medium">{theme.name}</span>
             {currentTheme === theme.id && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center">
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent rounded-full flex items-center justify-center">
                 <Check className="w-3 h-3 text-white" />
               </div>
             )}

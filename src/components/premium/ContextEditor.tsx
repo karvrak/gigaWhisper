@@ -3,13 +3,21 @@ import { HotkeyInput } from '../HotkeyInput';
 import { Save, ArrowLeft } from 'lucide-react';
 import type { TranscriptionContext } from '../../types/premium';
 
+interface ProviderAvailability {
+  groq: boolean;
+  openai: boolean;
+  deepgram: boolean;
+}
+
 interface ContextEditorProps {
   context: TranscriptionContext;
   onSave: (ctx: TranscriptionContext) => Promise<void>;
   onCancel: () => void;
+  providerAvailability?: ProviderAvailability;
 }
 
-export function ContextEditor({ context, onSave, onCancel }: ContextEditorProps) {
+export function ContextEditor({ context, onSave, onCancel, providerAvailability }: ContextEditorProps) {
+  const pa = providerAvailability ?? { groq: true, openai: true, deepgram: true };
   const [ctx, setCtx] = useState(context);
   const [saving, setSaving] = useState(false);
 
@@ -26,7 +34,7 @@ export function ContextEditor({ context, onSave, onCancel }: ContextEditorProps)
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <button onClick={onCancel} className="p-1 hover:bg-gray-100 dark:hover:bg-white/5 rounded">
+        <button onClick={onCancel} className="p-1 hover:bg-surface-tertiary rounded">
           <ArrowLeft className="w-4 h-4" />
         </button>
         <h3 className="text-sm font-medium">{!context.name ? 'New Context' : `Edit: ${context.name}`}</h3>
@@ -40,7 +48,7 @@ export function ContextEditor({ context, onSave, onCancel }: ContextEditorProps)
             value={ctx.name}
             onChange={(e) => setCtx({ ...ctx, name: e.target.value })}
             placeholder="e.g., Dev, Team, Personal"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-violet-500/20 rounded-md bg-white dark:bg-[#252136] text-sm"
+            className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
           />
         </div>
 
@@ -57,7 +65,7 @@ export function ContextEditor({ context, onSave, onCancel }: ContextEditorProps)
           <select
             value={ctx.language}
             onChange={(e) => setCtx({ ...ctx, language: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-violet-500/20 rounded-md bg-white dark:bg-[#252136] text-sm"
+            className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
           >
             <option value="auto">Auto-detect</option>
             <option value="en">English</option>
@@ -77,25 +85,53 @@ export function ContextEditor({ context, onSave, onCancel }: ContextEditorProps)
           <select
             value={ctx.provider}
             onChange={(e) => setCtx({ ...ctx, provider: e.target.value as TranscriptionContext['provider'] })}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-violet-500/20 rounded-md bg-white dark:bg-[#252136] text-sm"
+            className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
           >
             <option value="local">Local (Whisper)</option>
-            <option value="groq">Groq Cloud</option>
-            <option value="openai">OpenAI Whisper</option>
-            <option value="deepgram">Deepgram Nova</option>
+            <option value="groq" disabled={!pa.groq}>
+              Groq Cloud{!pa.groq ? ' (No API key)' : ''}
+            </option>
+            <option value="openai" disabled={!pa.openai}>
+              OpenAI Whisper{!pa.openai ? ' (No API key)' : ''}
+            </option>
+            <option value="deepgram" disabled={!pa.deepgram}>
+              Deepgram Nova{!pa.deepgram ? ' (No API key)' : ''}
+            </option>
           </select>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium mb-1">Icon (emoji)</label>
-          <input
-            type="text"
-            value={ctx.icon || ''}
-            onChange={(e) => setCtx({ ...ctx, icon: e.target.value || null })}
-            placeholder="e.g., 💻"
-            maxLength={2}
-            className="w-20 px-3 py-2 border border-gray-300 dark:border-violet-500/20 rounded-md bg-white dark:bg-[#252136] text-sm text-center"
-          />
+        <div className="flex gap-4">
+          <div>
+            <label className="block text-xs font-medium mb-1">Icon (emoji)</label>
+            <input
+              type="text"
+              value={ctx.icon || ''}
+              onChange={(e) => setCtx({ ...ctx, icon: e.target.value || null })}
+              placeholder="e.g., 💻"
+              maxLength={2}
+              className="w-20 px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm text-center"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Indicator Color</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={ctx.color || '#818cf8'}
+                onChange={(e) => setCtx({ ...ctx, color: e.target.value })}
+                className="w-10 h-10 rounded-md cursor-pointer border border-edge bg-transparent p-0.5"
+              />
+              {ctx.color && (
+                <button
+                  type="button"
+                  onClick={() => setCtx({ ...ctx, color: null })}
+                  className="text-xs text-content-tertiary hover:text-content-secondary"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

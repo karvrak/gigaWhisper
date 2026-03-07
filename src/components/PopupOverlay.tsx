@@ -90,34 +90,34 @@ export function PopupOverlay({ onClose }: PopupOverlayProps) {
       {/* Popup */}
       <div
         className={clsx(
-          'modal-content relative bg-white dark:bg-[#1a1725] rounded-xl shadow-xl max-w-lg w-full mx-4',
+          'modal-content relative bg-surface-secondary rounded-xl shadow-xl max-w-lg w-full mx-4',
           visible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-2'
         )}
         style={{ transition: 'transform 200ms ease, opacity 200ms ease' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/80 dark:border-violet-500/10">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-edge">
+          <h3 className="text-sm font-semibold text-content-secondary">
             Transcription Result
           </h3>
           <button
             onClick={handleClose}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors duration-150"
+            className="p-1.5 hover:bg-surface-tertiary rounded-lg transition-colors duration-150"
           >
-            <X className="w-4 h-4 text-gray-500" />
+            <X className="w-4 h-4 text-content-tertiary" />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-4 max-h-64 overflow-y-auto">
-          <p className="text-gray-900 dark:text-gray-100 text-sm leading-relaxed select-all">
+          <p className="text-sm leading-relaxed select-all">
             {text}
           </p>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200/80 dark:border-violet-500/10 bg-gray-50 dark:bg-[#0f0d1a]/50 rounded-b-xl">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-edge bg-surface-primary/50 rounded-b-xl">
+          <span className="text-xs text-content-secondary">
             Ctrl+C to copy, Esc to close
           </span>
 

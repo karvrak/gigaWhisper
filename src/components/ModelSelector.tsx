@@ -145,8 +145,8 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
             tabIndex={model.downloaded ? 0 : -1}
             className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
               value === model.model
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                : 'border-gray-200 dark:border-violet-500/15 hover:border-gray-300 dark:hover:border-violet-500/25'
+                ? 'border-accent bg-accent-subtle'
+                : 'border-edge hover:border-edge-hover'
             } ${!model.downloaded && !isDownloading ? 'opacity-75' : ''}`}
             onClick={() => model.downloaded && onChange(model.model)}
             onKeyDown={(e) => {
@@ -161,8 +161,8 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
               <div
                 className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                   value === model.model
-                    ? 'border-indigo-500 bg-indigo-500'
-                    : 'border-gray-300 dark:border-violet-500/20'
+                    ? 'border-accent bg-accent'
+                    : 'border-edge'
                 }`}
               >
                 {value === model.model && <Check className="w-3 h-3 text-white" />}
@@ -172,21 +172,21 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
               <div className="min-w-0 flex-1">
                 <div className="font-medium capitalize">
                   {model.model}{' '}
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-sm text-content-secondary">
                     ({formatBytes(model.size_bytes)})
                   </span>
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                <div className="text-sm text-content-secondary truncate">
                   {modelDescriptions[model.model]}
                 </div>
                 {/* Download progress */}
                 {isDownloading && currentProgress && (
                   <div className="mt-2">
-                    <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    <div className="flex justify-between text-xs text-content-secondary mb-1">
                       <span>{currentProgress.percentage.toFixed(1)}%</span>
                       <span>{formatSpeed(currentProgress.speed_bps)}</span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-[#252136] rounded-full h-1.5">
+                    <div className="w-full bg-surface-tertiary rounded-full h-1.5">
                       <div
                         className="bg-gradient-to-r from-indigo-500 to-violet-500 h-1.5 rounded-full transition-all"
                         style={{ width: `${currentProgress.percentage}%` }}
@@ -201,7 +201,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
             <div className="flex items-center gap-2 ml-2 flex-shrink-0">
               {isDownloading ? (
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400">
+                  <span className="flex items-center gap-1 text-sm text-accent">
                     <Loader2 className="w-4 h-4 animate-spin" />
                   </span>
                   <button
@@ -209,7 +209,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
                       e.stopPropagation();
                       handleCancelDownload(model.model);
                     }}
-                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    className="p-1 text-content-tertiary hover:text-red-500 transition-colors"
                     title="Cancel download"
                   >
                     <X className="w-4 h-4" />
@@ -226,7 +226,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
                       e.stopPropagation();
                       handleDelete(model.model);
                     }}
-                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    className="p-1 text-content-tertiary hover:text-red-500 transition-colors"
                     title="Delete model"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -238,7 +238,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
                     e.stopPropagation();
                     handleDownload(model.model);
                   }}
-                  className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+                  className="flex items-center gap-1 text-sm text-accent"
                 >
                   <Download className="w-4 h-4" />
                   Download

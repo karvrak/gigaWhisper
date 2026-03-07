@@ -19,6 +19,8 @@ pub struct GroqProvider {
     client: reqwest::Client,
     timeout: Duration,
     max_retries: u32,
+    /// Pre-fetched API key (avoids redundant credential store reads)
+    api_key: Option<String>,
 }
 
 impl GroqProvider {
@@ -40,17 +42,26 @@ impl GroqProvider {
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
 
+        let api_key = match SecretsManager::get_groq_api_key() {
+            Ok(key) => Some(key),
+            Err(e) => {
+                tracing::warn!("Failed to read Groq API key from credential store: {}", e);
+                None
+            }
+        };
+
         Self {
             model: model.unwrap_or_else(|| "whisper-large-v3".to_string()),
             client,
             timeout,
             max_retries,
+            api_key,
         }
     }
 
     /// Get API key from secure storage
     fn get_api_key(&self) -> Option<String> {
-        SecretsManager::get_groq_api_key().ok()
+        self.api_key.clone()
     }
 
     /// Get the current timeout

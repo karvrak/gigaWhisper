@@ -1,6 +1,6 @@
 [package]
 name = "gigawhisper"
-version = "1.0.8"
+version = "1.0.9"
 description = "Open-source voice transcription app for Windows"
 authors = ["GigaWhisper Contributors"]
 edition = "2021"
@@ -75,7 +75,7 @@ uuid = { version = "1", features = ["v4"] }
 num_cpus = "1.16"
 
 # Secure credential storage
-keyring = "3"
+keyring = { version = "3", features = ["windows-native"] }
 
 # Audio file I/O
 hound = "3.5"

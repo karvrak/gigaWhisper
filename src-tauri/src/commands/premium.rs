@@ -114,7 +114,10 @@ pub async fn get_premium_status(
     let features: Vec<FeatureStatus> = PremiumFeature::all()
         .iter()
         .map(|f| FeatureStatus {
-            id: format!("{:?}", f).to_lowercase().replace(' ', "-"),
+            id: serde_json::to_value(f)
+                .ok()
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| format!("{:?}", f).to_lowercase()),
             name: f.display_name().to_string(),
             available: FeatureGate::is_available(*f, is_premium),
         })

@@ -19,6 +19,8 @@ pub struct DeepgramProvider {
     model: String,
     client: reqwest::Client,
     max_retries: u32,
+    /// Pre-fetched API key (avoids redundant credential store reads)
+    api_key: Option<String>,
 }
 
 impl DeepgramProvider {
@@ -33,15 +35,24 @@ impl DeepgramProvider {
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
 
+        let api_key = match SecretsManager::get_secret(SECRET_NAME) {
+            Ok(key) => Some(key),
+            Err(e) => {
+                tracing::warn!("Failed to read Deepgram API key from credential store: {}", e);
+                None
+            }
+        };
+
         Self {
             model: model.unwrap_or_else(|| "nova-2".to_string()),
             client,
             max_retries: DEFAULT_MAX_RETRIES,
+            api_key,
         }
     }
 
     fn get_api_key(&self) -> Option<String> {
-        SecretsManager::get_secret(SECRET_NAME).ok()
+        self.api_key.clone()
     }
 
     fn retry_delay(attempt: u32) -> Duration {

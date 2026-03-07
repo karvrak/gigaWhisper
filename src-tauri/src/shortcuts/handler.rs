@@ -7,7 +7,7 @@ use crate::{AppState, RecordingState};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-/// Register all global shortcuts
+/// Register all global shortcuts (main record shortcut + context shortcuts)
 pub fn register_shortcuts(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let state = app.state::<AppState>();
     let config = state.config.read();
@@ -26,7 +26,7 @@ pub fn register_shortcuts(app: &tauri::App) -> Result<(), Box<dyn std::error::Er
 
         app.global_shortcut()
             .on_shortcut(record_shortcut, move |app, shortcut, event| {
-                handle_record_shortcut(app, shortcut, event.state);
+                handle_record_shortcut(app, shortcut, event.state, None);
             })
             .map_err(|e| {
                 tracing::error!("Failed to register shortcut {:?}: {}", record_shortcut, e);
@@ -36,12 +36,88 @@ pub fn register_shortcuts(app: &tauri::App) -> Result<(), Box<dyn std::error::Er
         tracing::info!("Global shortcut registered: {:?}", record_shortcut);
     }
 
+    // Register context-specific shortcuts
+    register_context_shortcuts_from_config(app.handle(), &config)?;
+
     Ok(())
 }
 
-/// Handle record shortcut event
-fn handle_record_shortcut(app: &AppHandle, _shortcut: &Shortcut, event: ShortcutState) {
+/// Register keyboard shortcuts for non-default transcription contexts
+fn register_context_shortcuts_from_config(
+    app: &AppHandle,
+    config: &crate::config::Settings,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for ctx in &config.contexts.contexts {
+        if ctx.id == "default" || ctx.shortcut.is_empty() {
+            continue;
+        }
+
+        // Skip mouse shortcuts for contexts (not supported)
+        if super::mouse_hook::is_mouse_shortcut(&ctx.shortcut) {
+            tracing::warn!(
+                "Mouse button shortcuts not supported for contexts, skipping: {}",
+                ctx.name
+            );
+            continue;
+        }
+
+        let shortcut: Shortcut = match ctx.shortcut.parse() {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to parse context shortcut '{}' for '{}': {}",
+                    ctx.shortcut,
+                    ctx.name,
+                    e
+                );
+                continue;
+            }
+        };
+
+        let context_id = ctx.id.clone();
+        app.global_shortcut()
+            .on_shortcut(shortcut, move |app, shortcut, event| {
+                handle_record_shortcut(app, shortcut, event.state, Some(context_id.clone()));
+            })
+            .map_err(|e| {
+                tracing::error!(
+                    "Failed to register context shortcut {:?} for '{}': {}",
+                    shortcut,
+                    ctx.name,
+                    e
+                );
+                e
+            })?;
+
+        tracing::info!(
+            "Context shortcut registered: {:?} -> '{}'",
+            shortcut,
+            ctx.name
+        );
+    }
+
+    Ok(())
+}
+
+/// Handle record shortcut event, optionally switching active context first
+fn handle_record_shortcut(
+    app: &AppHandle,
+    _shortcut: &Shortcut,
+    event: ShortcutState,
+    context_id: Option<String>,
+) {
     let state = app.state::<AppState>();
+
+    // If a context shortcut triggered this, switch active context
+    if let Some(ref ctx_id) = context_id {
+        let mut config = state.config.write();
+        if config.contexts.active_context != *ctx_id {
+            config.contexts.active_context = ctx_id.clone();
+            let _ = config.save();
+            tracing::info!("Switched active context to '{}'", ctx_id);
+        }
+    }
+
     let config = state.config.read();
 
     match config.recording.mode {
@@ -143,9 +219,12 @@ pub fn update_shortcuts(app: &AppHandle) -> Result<(), Box<dyn std::error::Error
         let app_clone = app.clone();
         app.global_shortcut()
             .on_shortcut(record_shortcut, move |_app, shortcut, event| {
-                handle_record_shortcut(&app_clone, shortcut, event.state);
+                handle_record_shortcut(&app_clone, shortcut, event.state, None);
             })?;
     }
+
+    // Re-register context shortcuts
+    register_context_shortcuts_from_config(app, &config)?;
 
     tracing::info!("Global shortcuts updated");
     Ok(())
@@ -390,9 +469,15 @@ async fn stop_recording_internal(app: &AppHandle) -> Result<String, String> {
 /// Show the recording indicator overlay window
 fn show_recording_indicator(app: &AppHandle) {
     let state = app.state::<AppState>();
-    let show_indicator = {
+    let (show_indicator, context_color) = {
         let config = state.config.read();
-        config.ui.show_indicator
+        let color = config
+            .contexts
+            .contexts
+            .iter()
+            .find(|c| c.id == config.contexts.active_context)
+            .and_then(|c| c.color.clone());
+        (config.ui.show_indicator, color)
     };
 
     if !show_indicator {
@@ -406,9 +491,16 @@ fn show_recording_indicator(app: &AppHandle) {
         let _ = window.show();
 
         let window_clone = window.clone();
+        let color = context_color.clone();
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(50));
             let _ = window_clone.emit("recording:state-changed", "recording");
+            // Send context color to indicator
+            if let Some(c) = color {
+                let _ = window_clone.emit("indicator:context-color", c);
+            } else {
+                let _ = window_clone.emit("indicator:context-color", "");
+            }
         });
 
         tracing::debug!("Recording indicator shown");

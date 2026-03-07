@@ -7,6 +7,7 @@ type IndicatorState = 'recording' | 'processing';
 export function RecordingIndicatorWindow() {
   const [duration, setDuration] = useState(0);
   const [state, setState] = useState<IndicatorState>('recording');
+  const [contextColor, setContextColor] = useState<string | null>(null);
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(Date.now());
 
@@ -55,9 +56,15 @@ export function RecordingIndicatorWindow() {
       setState('processing');
     });
 
+    // Listen for context color
+    const unsubColor = listen<string>('indicator:context-color', (event) => {
+      setContextColor(event.payload || null);
+    });
+
     return () => {
       unsubStateChanged.then((fn) => fn());
       unsubProcessing.then((fn) => fn());
+      unsubColor.then((fn) => fn());
       stopTimer();
     };
   }, []);
@@ -69,9 +76,18 @@ export function RecordingIndicatorWindow() {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Build dynamic waveform bar style based on context color
+  const waveBarStyle = contextColor
+    ? { background: `linear-gradient(180deg, ${contextColor} 0%, ${contextColor}99 100%)` }
+    : undefined;
+
+  const borderStyle = contextColor
+    ? { borderColor: `${contextColor}30` }
+    : undefined;
+
   return (
     <div className="recording-indicator-container">
-      <div className="recording-indicator">
+      <div className="recording-indicator" style={borderStyle}>
         {state === 'recording' ? (
           <>
             {/* Recording pulse */}
@@ -88,6 +104,7 @@ export function RecordingIndicatorWindow() {
                   className="waveform-bar"
                   style={{
                     animationDelay: `${i * 0.05}s`,
+                    ...waveBarStyle,
                   }}
                 />
               ))}

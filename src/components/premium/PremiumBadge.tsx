@@ -26,8 +26,8 @@ export function PremiumBadge({ feature, locked, className = '' }: PremiumBadgePr
     <span
       className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-full ${
         isPremium
-          ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-          : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+          ? 'bg-accent/10 text-accent'
+          : 'bg-surface-tertiary text-content-secondary'
       } ${className}`}
       title={`Requires Premium${!isPremium ? ' license' : ''}`}
     >

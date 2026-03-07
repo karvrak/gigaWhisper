@@ -159,11 +159,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl text-violet-600 dark:text-violet-400">
             <Sun className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold">
             Choose Your Theme
           </h2>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+        <p className="text-content-secondary text-sm leading-relaxed">
           Select how you want GigaWhisper to look. You can change this anytime in settings.
         </p>
       </div>
@@ -180,8 +180,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               onClick={() => setSelectedTheme(value)}
               className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
                 selectedTheme === value
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                  : `border-gray-200 dark:border-violet-500/15 hover:border-gray-300`
+                  ? 'border-accent bg-accent-subtle'
+                  : 'border-edge hover:border-edge-hover'
               }`}
             >
               <div className={`w-16 h-12 rounded-lg ${bg} ${border} border flex items-center justify-center`}>
@@ -189,7 +189,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
               <span className="text-sm font-medium">{label}</span>
               {selectedTheme === value && (
-                <div className="w-2 h-2 bg-indigo-500 rounded-full" />
+                <div className="w-2 h-2 bg-accent rounded-full" />
               )}
             </button>
           ))}
@@ -206,11 +206,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl text-indigo-600 dark:text-indigo-400">
             <Mic className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold">
             Voice to Text, Instantly
           </h2>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+        <p className="text-content-secondary text-sm leading-relaxed">
           Press your shortcut key, speak, and your words are automatically typed wherever your cursor is.
         </p>
       </div>
@@ -219,11 +219,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         <div className="flex flex-col items-center gap-4">
           {/* Keyboard shortcut */}
           <div className="flex items-center gap-2">
-            <div className="px-3 py-2 bg-gray-100 dark:bg-[#252136] rounded-lg border border-gray-300 dark:border-violet-500/20 font-mono text-sm">
+            <div className="px-3 py-2 bg-surface-tertiary rounded-lg border border-edge font-mono text-sm">
               Ctrl
             </div>
-            <span className="text-gray-400">+</span>
-            <div className="px-3 py-2 bg-gray-100 dark:bg-[#252136] rounded-lg border border-gray-300 dark:border-violet-500/20 font-mono text-sm">
+            <span className="text-content-tertiary">+</span>
+            <div className="px-3 py-2 bg-surface-tertiary rounded-lg border border-edge font-mono text-sm">
               Space
             </div>
           </div>
@@ -281,11 +281,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl text-violet-600 dark:text-violet-400">
             <Settings className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold">
             Choose Your Model
           </h2>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+        <p className="text-content-secondary text-sm leading-relaxed">
           Select a transcription model. Larger models are more accurate but slower. You can change this later in settings.
         </p>
       </div>
@@ -302,16 +302,16 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               disabled={downloading}
               className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left ${
                 selectedModel === model.model
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                  : 'border-gray-200 dark:border-violet-500/15 hover:border-gray-300 dark:hover:border-violet-500/25'
+                  ? 'border-accent bg-accent-subtle'
+                  : 'border-edge hover:border-edge-hover'
               } ${downloading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="flex items-center gap-3">
                 <div
                   className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                     selectedModel === model.model
-                      ? 'border-indigo-500 bg-indigo-500'
-                      : 'border-gray-300 dark:border-violet-500/20'
+                      ? 'border-accent bg-accent'
+                      : 'border-edge'
                   }`}
                 >
                   {selectedModel === model.model && (
@@ -328,7 +328,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-content-secondary">
                     {model.size} - {model.description}
                   </div>
                 </div>
@@ -342,19 +342,19 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           {downloading ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                <span className="flex items-center gap-2 text-accent">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Downloading {MODELS.find(m => m.model === selectedModel)?.name}...
                 </span>
-                <span className="text-gray-500">{downloadProgress.toFixed(0)}%</span>
+                <span className="text-content-secondary">{downloadProgress.toFixed(0)}%</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-[#252136] rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-surface-tertiary rounded-full h-2 overflow-hidden">
                 <div
                   className="bg-gradient-to-r from-indigo-500 to-violet-500 h-2 rounded-full transition-all animate-shimmer"
                   style={{ width: `${downloadProgress}%`, backgroundSize: '200% 100%' }}
                 />
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+              <p className="text-xs text-content-secondary text-center">
                 Download continues in background. You can proceed to next step.
               </p>
             </div>
@@ -385,11 +385,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl text-emerald-600 dark:text-emerald-400">
             <Sparkles className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold">
             Ready to Go!
           </h2>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+        <p className="text-content-secondary text-sm leading-relaxed">
           GigaWhisper runs in your system tray. Use your shortcut anytime, anywhere.
         </p>
       </div>
@@ -416,7 +416,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           </div>
 
           {/* System tray illustration */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 dark:bg-[#252136] rounded-lg">
+          <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 dark:bg-surface-tertiary rounded-lg">
             <div className="flex gap-1">
               <div className="w-4 h-4 bg-gray-600 rounded" />
               <div className="w-4 h-4 bg-gray-600 rounded" />
@@ -436,7 +436,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
               <div>
                 <div className="font-medium">Customize your shortcut</div>
-                <div className="text-gray-500 dark:text-gray-400 text-xs">Settings → General → Record Shortcut</div>
+                <div className="text-content-secondary text-xs">Settings → General → Record Shortcut</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -445,7 +445,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
               <div>
                 <div className="font-medium">Switch modes</div>
-                <div className="text-gray-500 dark:text-gray-400 text-xs">Push-to-talk or Toggle mode</div>
+                <div className="text-content-secondary text-xs">Push-to-talk or Toggle mode</div>
               </div>
             </div>
           </div>
@@ -474,8 +474,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   // Welcome step has its own navigation
   if (currentStep === 0) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f0d1a]/60 backdrop-blur-sm">
-        <div className="bg-white dark:bg-[#1a1725] rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="bg-surface-secondary rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
           {renderStep()}
         </div>
       </div>
@@ -483,8 +483,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f0d1a]/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-[#1a1725] rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-surface-secondary rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
         {renderStep()}
 
         {/* Footer */}
@@ -500,7 +500,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                     ? 'w-6 bg-gradient-to-r from-indigo-500 to-violet-500'
                     : index < currentStep
                     ? 'w-2 bg-indigo-300 dark:bg-indigo-600'
-                    : 'w-2 bg-gray-300 dark:bg-violet-500/20 hover:bg-gray-400'
+                    : 'w-2 bg-edge hover:bg-edge-hover'
                 }`}
               />
             ))}
@@ -511,7 +511,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             {currentStep > 0 && (
               <button
                 onClick={handlePrev}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
+                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-content-secondary hover:bg-surface-tertiary rounded-lg transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back

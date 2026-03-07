@@ -32,6 +32,17 @@ const mockSettings = {
     groq: {
       model: 'whisper-large-v3',
       timeout_seconds: 30,
+      api_key_configured: false,
+    },
+    openai: {
+      model: 'whisper-1',
+      timeout_seconds: 30,
+      api_key_configured: false,
+    },
+    deepgram: {
+      model: 'nova-2',
+      timeout_seconds: 30,
+      api_key_configured: false,
     },
   },
   audio: {

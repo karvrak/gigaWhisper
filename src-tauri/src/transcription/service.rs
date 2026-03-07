@@ -176,6 +176,9 @@ impl TranscriptionService {
             status.last_error = None;
         }
 
+        // Validate API key is available for the selected provider
+        self.validate_provider_configured(&config.transcription.provider)?;
+
         let transcription_config = TranscriptionConfig {
             language: config.transcription.language.clone(),
             translate: false,
@@ -283,8 +286,28 @@ impl TranscriptionService {
             return Err("Recording too short".to_string());
         }
 
-        // Get config
-        let config = state.config.read().clone();
+        // Get config and apply active context overrides
+        let config = {
+            let mut cfg = state.config.read().clone();
+            let active_id = cfg.contexts.active_context.clone();
+            if let Some(ctx) = cfg
+                .contexts
+                .contexts
+                .iter()
+                .find(|c| c.id == active_id && c.id != "default")
+            {
+                // Override transcription settings with context-specific values
+                cfg.transcription.language = ctx.language.clone();
+                cfg.transcription.provider = ctx.provider.clone();
+                tracing::info!(
+                    "Using context '{}': language={}, provider={:?}",
+                    ctx.name,
+                    ctx.language,
+                    ctx.provider
+                );
+            }
+            cfg
+        };
 
         // Apply Voice Activity Detection if enabled
         let samples_for_transcription = if config.audio.vad.enabled {
@@ -463,6 +486,28 @@ impl TranscriptionService {
             .map_err(|e| e.to_string())?;
 
         Ok(response.text)
+    }
+
+    /// Validate that the selected provider has its API key configured
+    fn validate_provider_configured(&self, provider: &ConfigProvider) -> Result<(), String> {
+        use crate::config::SecretsManager;
+        let (provider_name, result) = match provider {
+            ConfigProvider::Local => return Ok(()),
+            ConfigProvider::Groq => ("Groq", SecretsManager::get_groq_api_key()),
+            ConfigProvider::OpenAi => ("OpenAI", SecretsManager::get_openai_api_key()),
+            ConfigProvider::Deepgram => ("Deepgram", SecretsManager::get_deepgram_api_key()),
+        };
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                tracing::warn!("{} API key check failed: {}", provider_name, e);
+                Err(format!(
+                    "{} API key not configured. Please add your API key in Settings > Transcription before using this provider.",
+                    provider_name
+                ))
+            }
+        }
     }
 
     /// Output transcribed text (clipboard + paste or popup)

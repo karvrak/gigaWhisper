@@ -36,14 +36,14 @@ export function LicensePanel() {
       {/* Status Card */}
       <div className={`p-4 rounded-xl border ${
         isPremium
-          ? 'bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 border-indigo-200 dark:border-indigo-500/20'
-          : 'bg-gray-50 dark:bg-[#1a1725] border-gray-200 dark:border-violet-500/10'
+          ? 'bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 border-accent/30'
+          : 'bg-surface-primary border-edge'
       }`}>
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${
             isPremium
               ? 'bg-gradient-to-br from-indigo-500 to-violet-500 text-white'
-              : 'bg-gray-200 dark:bg-[#252136] text-gray-500 dark:text-gray-400'
+              : 'bg-surface-tertiary text-content-secondary'
           }`}>
             <Shield className="w-5 h-5" />
           </div>
@@ -51,7 +51,7 @@ export function LicensePanel() {
             <h3 className="font-semibold text-sm">
               {isPremium ? 'Premium Active' : 'Free Plan'}
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-content-secondary">
               {isPremium
                 ? `Valid until ${status?.expires_at ? new Date(status.expires_at * 1000).toLocaleDateString() : 'lifetime'}`
                 : 'Unlock premium features with a license key'}
@@ -71,13 +71,13 @@ export function LicensePanel() {
           <label className="block text-sm font-medium">License Key</label>
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-tertiary" />
               <input
                 type="text"
                 value={licenseKey}
                 onChange={(e) => setLicenseKey(e.target.value)}
                 placeholder="XXXX-XXXX-XXXX-XXXX"
-                className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-violet-500/20 rounded-lg bg-white dark:bg-[#252136] text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full pl-9 pr-3 py-2 border border-edge rounded-lg bg-surface-tertiary text-sm focus:ring-2 focus:ring-accent focus:border-accent"
                 onKeyDown={(e) => e.key === 'Enter' && handleActivate()}
               />
             </div>
@@ -101,7 +101,7 @@ export function LicensePanel() {
       {isPremium && (
         <button
           onClick={handleDeactivate}
-          className="text-sm text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+          className="text-sm text-content-secondary hover:text-red-500 transition-colors"
         >
           Deactivate License
         </button>
@@ -125,7 +125,7 @@ export function LicensePanel() {
                 <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
                   feature.available
                     ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                    : 'bg-surface-tertiary text-content-muted'
                 }`}>
                   {feature.available ? (
                     <Check className="w-3 h-3" />
@@ -133,7 +133,7 @@ export function LicensePanel() {
                     <span className="block w-1.5 h-0.5 bg-current rounded" />
                   )}
                 </div>
-                <span className={feature.available ? '' : 'text-gray-400 dark:text-gray-500'}>
+                <span className={feature.available ? '' : 'text-content-muted'}>
                   {feature.name}
                 </span>
               </div>

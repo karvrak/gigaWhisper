@@ -97,37 +97,37 @@ export function UpdateNotification() {
     <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-slide-up">
       <div className="card overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-indigo-50 dark:bg-indigo-500/10 border-b border-gray-200/80 dark:border-violet-500/15">
+        <div className="flex items-center justify-between px-4 py-3 bg-accent-subtle border-b border-edge">
           <div className="flex items-center gap-2">
             {state === 'ready' ? (
               <CheckCircle className="w-5 h-5 text-green-500" />
             ) : (
-              <Download className="w-5 h-5 text-indigo-500" />
+              <Download className="w-5 h-5 text-accent" />
             )}
-            <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+            <span className="font-semibold text-sm">
               {state === 'ready' ? 'Update Ready' : 'Update Available'}
             </span>
           </div>
           {state !== 'downloading' && (
             <button
               onClick={handleDismiss}
-              className="p-1.5 hover:bg-gray-200/70 dark:hover:bg-[#252136]/50 rounded-lg transition-colors duration-150"
+              className="p-1.5 hover:bg-surface-tertiary rounded-lg transition-colors duration-150"
             >
-              <X className="w-4 h-4 text-gray-500" />
+              <X className="w-4 h-4 text-content-tertiary" />
             </button>
           )}
         </div>
 
         {/* Content */}
         <div className="px-4 py-3">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
+          <p className="text-sm text-content-secondary mb-3 leading-relaxed">
             {state === 'ready' ? (
               'The update has been downloaded. Restart to apply.'
             ) : (
               <>
-                Version <span className="font-mono font-medium text-gray-900 dark:text-gray-100">{updateInfo.newVersion}</span> is available.
+                Version <span className="font-mono font-medium text-content-primary">{updateInfo.newVersion}</span> is available.
                 <br />
-                <span className="text-gray-500 dark:text-gray-500">Current: {updateInfo.currentVersion}</span>
+                <span className="text-content-tertiary">Current: {updateInfo.currentVersion}</span>
               </>
             )}
           </p>
@@ -141,7 +141,7 @@ export function UpdateNotification() {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1.5">Downloading... {progress}%</p>
+              <p className="text-xs text-content-secondary mt-1.5">Downloading... {progress}%</p>
             </div>
           )}
 
@@ -163,7 +163,7 @@ export function UpdateNotification() {
                 </button>
                 <button
                   onClick={handleDismiss}
-                  className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#252136]/50 rounded-lg text-sm transition-colors duration-150"
+                  className="px-3 py-2 text-content-secondary hover:bg-surface-tertiary rounded-lg text-sm transition-colors duration-150"
                 >
                   Later
                 </button>
@@ -171,7 +171,7 @@ export function UpdateNotification() {
             )}
 
             {state === 'downloading' && (
-              <div className="flex-1 flex items-center justify-center py-2 text-gray-500 text-sm">
+              <div className="flex-1 flex items-center justify-center py-2 text-content-secondary text-sm">
                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 Downloading...
               </div>

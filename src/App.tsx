@@ -16,6 +16,8 @@ type View = 'main' | 'history' | 'settings';
 // Helper function to apply theme
 function applyTheme(theme: 'system' | 'light' | 'dark') {
   const root = document.documentElement;
+  // Don't change dark/light class if a custom theme is active (they force dark)
+  if (root.hasAttribute('data-custom-theme')) return;
   if (theme === 'dark') {
     root.classList.add('dark');
   } else if (theme === 'light') {
@@ -80,10 +82,10 @@ function App() {
 
   if (settingsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#f8f7fc] dark:bg-[#0f0d1a]">
+      <div className="flex items-center justify-center h-screen bg-surface-primary">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-gray-500 dark:text-indigo-300/50">Loading...</span>
+          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-content-tertiary">Loading...</span>
         </div>
       </div>
     );
@@ -96,9 +98,9 @@ function App() {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-[#f8f7fc] dark:bg-[#0f0d1a] text-gray-900 dark:text-gray-100 overflow-hidden">
+    <div className="h-screen flex flex-col bg-surface-primary text-content-primary overflow-hidden">
       {/* Navigation Bar */}
-      <header className="bg-white/80 dark:bg-[#1a1725]/80 backdrop-blur-xl border-b border-indigo-100/80 dark:border-violet-500/10 select-none flex-shrink-0">
+      <header className="bg-surface-secondary/80 backdrop-blur-xl border-b border-edge select-none flex-shrink-0">
         <div className="flex items-center h-11">
           {/* Logo - left side */}
           <div className="w-12 h-11 flex items-center justify-center">
@@ -113,8 +115,8 @@ function App() {
                 onClick={() => setView(id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                   view === id
-                    ? 'bg-gradient-to-r from-indigo-500/10 to-violet-500/10 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/5 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'bg-accent/10 text-accent shadow-sm'
+                    : 'text-content-secondary hover:bg-accent/5 hover:text-content-primary'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -136,16 +138,16 @@ function App() {
             </div>
 
             {/* Welcome Card */}
-            <div className="card p-5 hover-lift cursor-pointer group hover:border-indigo-300/30 dark:hover:border-indigo-500/20 transition-all" onClick={() => setView('settings')}>
+            <div className="card p-5 hover-lift cursor-pointer group hover:border-accent/20 transition-all" onClick={() => setView('settings')}>
               <div className="flex items-center gap-4">
-                <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
-                  <Mic className="w-5 h-5 text-indigo-500" />
+                <div className="p-2.5 rounded-xl bg-accent/10">
+                  <Mic className="w-5 h-5 text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                  <h2 className="text-base font-semibold mb-1">
                     Keyboard Shortcut
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  <p className="text-sm text-content-secondary mb-3">
                     {settings?.recording.mode === 'push-to-talk'
                       ? 'Hold the shortcut to record, release to transcribe'
                       : 'Press once to start, press again to stop recording'}
@@ -154,12 +156,12 @@ function App() {
                     {settings?.shortcuts.record || 'Ctrl+Shift+Space'}
                   </kbd>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-400 transition-colors" />
+                <ChevronRight className="w-5 h-5 text-content-tertiary group-hover:text-accent transition-colors" />
               </div>
             </div>
 
             {/* Provider Card */}
-            <div className="card p-5 hover-lift cursor-pointer group hover:border-indigo-300/30 dark:hover:border-indigo-500/20 transition-all" onClick={() => setView('settings')}>
+            <div className="card p-5 hover-lift cursor-pointer group hover:border-accent/20 transition-all" onClick={() => setView('settings')}>
               <div className="flex items-center gap-4">
                 <div className={`p-2.5 rounded-xl ${
                   settings?.transcription.provider === 'local'
@@ -173,10 +175,10 @@ function App() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-0.5">
+                  <h2 className="text-base font-semibold mb-0.5">
                     Transcription Provider
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-content-secondary">
                     {settings?.transcription.provider === 'local' ? (
                       <>Local - Whisper {settings?.transcription.local.model || 'base'}</>
                     ) : (
@@ -184,23 +186,23 @@ function App() {
                     )}
                   </p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-400 transition-colors" />
+                <ChevronRight className="w-5 h-5 text-content-tertiary group-hover:text-accent transition-colors" />
               </div>
             </div>
 
             {/* Quick tip */}
             <div className="text-center pt-2">
-              <p className="text-xs text-gray-400 dark:text-indigo-300/30">
+              <p className="text-xs text-content-muted">
                 GigaWhisper runs in your system tray. Use the shortcut anywhere to transcribe.
               </p>
             </div>
 
             {/* Pro Upsell Banner */}
             {!proBannerDismissed && !showOnboarding && (
-              <div className="relative mt-4 p-4 rounded-xl bg-gradient-to-r from-indigo-500/5 to-violet-500/5 dark:from-indigo-900/30 dark:to-violet-900/30 border border-indigo-200/50 dark:border-violet-500/15 animate-fade-in">
+              <div className="relative mt-4 p-4 rounded-xl bg-accent/5 border border-edge animate-fade-in">
                 <button
                   onClick={dismissProBanner}
-                  className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                  className="absolute top-2 right-2 p-1 rounded-md text-content-tertiary hover:text-content-primary hover:bg-surface-tertiary transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -209,14 +211,14 @@ function App() {
                     <Zap className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-indigo-200">GigaWhisper Pro</h3>
-                    <p className="text-xs text-gray-500 dark:text-indigo-300/50">Unlimited cloud, priority processing</p>
+                    <h3 className="text-sm font-semibold">GigaWhisper Pro</h3>
+                    <p className="text-xs text-content-secondary">Unlimited cloud, priority processing</p>
                   </div>
                   <a
                     href="https://gigawhisper.com/pro"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                    className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-accent hover:text-accent-hover border border-edge rounded-lg hover:bg-accent/5 transition-colors"
                   >
                     Learn more
                   </a>

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-03-07
+
+### Fixed
+- **Critical: API keys not persisting** — keyring crate was compiled without Windows backend (`windows-native` feature), causing all API keys (Deepgram, Groq, OpenAI) to be stored in memory only and lost on restart
+- **Audio file leak** — orphaned `.wav` files in AppData were never cleaned up when history entries were evicted (100-entry limit)
+
+### Added
+- Automatic cleanup of orphaned audio files on startup (logs freed space)
+- Audio file deletion when history entries are evicted by the 100-entry limit
+- Diagnostic logging for credential store errors (shows exact keyring failure reason)
+
+### Changed
+- Cloud transcription providers (Deepgram, Groq, OpenAI) now read API key once at construction instead of on every transcription request
+
 ## [1.0.7] - 2026-03-04
 
 ### Changed

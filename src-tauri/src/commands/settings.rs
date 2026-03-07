@@ -161,6 +161,220 @@ pub fn validate_groq_api_key(api_key: String) -> Result<(), String> {
     SecretsManager::validate_groq_api_key(&api_key).map_err(|e| e.to_string())
 }
 
+// ── OpenAI API Key ──────────────────────────────────────
+
+#[tauri::command]
+pub async fn set_openai_api_key(state: State<'_, AppState>, api_key: String) -> Result<(), String> {
+    SecretsManager::set_openai_api_key(&api_key).map_err(|e| e.to_string())?;
+    {
+        let mut config = state.config.write();
+        config.transcription.openai.api_key_configured = true;
+        config.post_processing.openai.api_key_configured = true;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("OpenAI API key saved securely");
+    Ok(())
+}
+
+#[tauri::command]
+pub fn has_openai_api_key() -> bool {
+    SecretsManager::has_openai_api_key()
+}
+
+#[tauri::command]
+pub async fn clear_openai_api_key(state: State<'_, AppState>) -> Result<(), String> {
+    let _ = SecretsManager::delete_openai_api_key();
+    {
+        let mut config = state.config.write();
+        config.transcription.openai.api_key_configured = false;
+        config.post_processing.openai.api_key_configured = false;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("OpenAI API key removed");
+    Ok(())
+}
+
+// ── Deepgram API Key ────────────────────────────────────
+
+#[tauri::command]
+pub async fn set_deepgram_api_key(
+    state: State<'_, AppState>,
+    api_key: String,
+) -> Result<(), String> {
+    SecretsManager::set_deepgram_api_key(&api_key).map_err(|e| e.to_string())?;
+    {
+        let mut config = state.config.write();
+        config.transcription.deepgram.api_key_configured = true;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("Deepgram API key saved securely");
+    Ok(())
+}
+
+#[tauri::command]
+pub fn has_deepgram_api_key() -> bool {
+    SecretsManager::has_deepgram_api_key()
+}
+
+#[tauri::command]
+pub async fn clear_deepgram_api_key(state: State<'_, AppState>) -> Result<(), String> {
+    let _ = SecretsManager::delete_deepgram_api_key();
+    {
+        let mut config = state.config.write();
+        config.transcription.deepgram.api_key_configured = false;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("Deepgram API key removed");
+    Ok(())
+}
+
+// ── Live API Key Validation ──────────────────────────────
+
+/// Validate a Groq API key by making a real API call
+#[tauri::command]
+pub async fn validate_groq_api_key_live(api_key: String) -> Result<(), String> {
+    let api_key = api_key.trim().to_string();
+    SecretsManager::validate_groq_api_key(&api_key).map_err(|e| e.to_string())?;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("https://api.groq.com/openai/v1/models")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if resp.status().is_success() {
+        Ok(())
+    } else if resp.status().as_u16() == 401 {
+        Err("Invalid API key — authentication failed".to_string())
+    } else {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        Err(format!("API error ({}): {}", status, body))
+    }
+}
+
+/// Validate an OpenAI API key by making a real API call
+#[tauri::command]
+pub async fn validate_openai_api_key_live(api_key: String) -> Result<(), String> {
+    let api_key = api_key.trim().to_string();
+    SecretsManager::validate_openai_api_key(&api_key).map_err(|e| e.to_string())?;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("https://api.openai.com/v1/models")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if resp.status().is_success() {
+        Ok(())
+    } else if resp.status().as_u16() == 401 {
+        Err("Invalid API key — authentication failed".to_string())
+    } else {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        Err(format!("API error ({}): {}", status, body))
+    }
+}
+
+/// Validate a Deepgram API key by making a real API call
+#[tauri::command]
+pub async fn validate_deepgram_api_key_live(api_key: String) -> Result<(), String> {
+    let api_key = api_key.trim().to_string();
+    SecretsManager::validate_deepgram_api_key(&api_key).map_err(|e| e.to_string())?;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("https://api.deepgram.com/v1/projects")
+        .header("Authorization", format!("Token {}", api_key))
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if resp.status().is_success() {
+        Ok(())
+    } else if resp.status().as_u16() == 401 {
+        Err("Invalid API key — authentication failed".to_string())
+    } else {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        Err(format!("API error ({}): {}", status, body))
+    }
+}
+
+/// Validate an Anthropic API key by making a real API call
+#[tauri::command]
+pub async fn validate_anthropic_api_key_live(api_key: String) -> Result<(), String> {
+    let api_key = api_key.trim().to_string();
+    SecretsManager::validate_anthropic_api_key(&api_key).map_err(|e| e.to_string())?;
+
+    let client = reqwest::Client::new();
+    // Use the messages endpoint with a minimal request to check auth
+    let resp = client
+        .post("https://api.anthropic.com/v1/messages")
+        .header("x-api-key", &api_key)
+        .header("anthropic-version", "2023-06-01")
+        .header("content-type", "application/json")
+        .body(r#"{"model":"claude-haiku-4-5-20241022","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}"#)
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    // 401 = bad key, anything else (including 200, 400, 429) means key is valid
+    if resp.status().as_u16() == 401 {
+        Err("Invalid API key — authentication failed".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+// ── Anthropic API Key ───────────────────────────────────
+
+#[tauri::command]
+pub async fn set_anthropic_api_key(
+    state: State<'_, AppState>,
+    api_key: String,
+) -> Result<(), String> {
+    SecretsManager::set_anthropic_api_key(&api_key).map_err(|e| e.to_string())?;
+    {
+        let mut config = state.config.write();
+        config.post_processing.anthropic.api_key_configured = true;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("Anthropic API key saved securely");
+    Ok(())
+}
+
+#[tauri::command]
+pub fn has_anthropic_api_key() -> bool {
+    SecretsManager::has_anthropic_api_key()
+}
+
+#[tauri::command]
+pub async fn clear_anthropic_api_key(state: State<'_, AppState>) -> Result<(), String> {
+    let _ = SecretsManager::delete_anthropic_api_key();
+    {
+        let mut config = state.config.write();
+        config.post_processing.anthropic.api_key_configured = false;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("Anthropic API key removed");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

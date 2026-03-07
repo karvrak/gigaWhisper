@@ -10,18 +10,18 @@ export function CreditsMeter() {
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2">
-          <Coins className="w-4 h-4 text-gray-400" />
+          <Coins className="w-4 h-4 text-content-tertiary" />
           <span className="font-medium">Cloud Credits</span>
         </div>
         <span className={`font-mono text-sm ${
-          isDepleted ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-gray-600 dark:text-gray-300'
+          isDepleted ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-content-secondary'
         }`}>
           {balance.toFixed(2)} EUR
         </span>
       </div>
 
       {/* Progress Bar */}
-      <div className="h-2 bg-gray-100 dark:bg-[#252136] rounded-full overflow-hidden">
+      <div className="h-2 bg-surface-tertiary rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
             isDepleted

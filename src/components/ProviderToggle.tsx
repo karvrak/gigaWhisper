@@ -52,18 +52,18 @@ export function ProviderToggle({ value, onChange, isPremium = false }: ProviderT
             disabled={locked}
             className={`p-4 border rounded-lg text-left transition-colors ${
               value === id
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                ? 'border-accent bg-accent-subtle'
                 : locked
-                  ? 'border-gray-200 dark:border-violet-500/10 opacity-60 cursor-not-allowed'
-                  : 'border-gray-200 dark:border-violet-500/15 hover:border-gray-300 dark:hover:border-violet-500/25'
+                  ? 'border-edge opacity-60 cursor-not-allowed'
+                  : 'border-edge hover:border-edge-hover'
             }`}
           >
             <div className="flex items-center gap-3 mb-2">
               <div
                 className={`p-2 rounded-lg ${
                   value === id
-                    ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-800 dark:text-indigo-300'
-                    : 'bg-gray-100 text-gray-600 dark:bg-[#252136] dark:text-gray-400'
+                    ? 'bg-accent/10 text-accent'
+                    : 'bg-surface-tertiary text-content-secondary'
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -71,7 +71,7 @@ export function ProviderToggle({ value, onChange, isPremium = false }: ProviderT
               <div className="font-medium">{label}</div>
               {premium && <PremiumBadge locked={!isPremium} />}
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-content-secondary">
               {description}
             </p>
           </button>

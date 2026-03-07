@@ -7,6 +7,9 @@ use thiserror::Error;
 
 const SERVICE_NAME: &str = "gigawhisper";
 const GROQ_API_KEY_NAME: &str = "groq_api_key";
+const OPENAI_API_KEY_NAME: &str = "openai_api_key";
+const DEEPGRAM_API_KEY_NAME: &str = "deepgram_api_key";
+const ANTHROPIC_API_KEY_NAME: &str = "anthropic_api_key";
 
 /// Errors related to secret storage
 #[derive(Debug, Error)]
@@ -105,6 +108,109 @@ impl SecretsManager {
     /// Check if Groq API key exists
     pub fn has_groq_api_key() -> bool {
         Self::get_groq_api_key().is_ok()
+    }
+
+    // ── OpenAI ──────────────────────────────────────────────
+
+    pub fn set_openai_api_key(api_key: &str) -> Result<(), SecretsError> {
+        Self::validate_openai_api_key(api_key)?;
+        Self::set_secret(OPENAI_API_KEY_NAME, api_key.trim())
+    }
+
+    pub fn get_openai_api_key() -> Result<String, SecretsError> {
+        Self::get_secret(OPENAI_API_KEY_NAME)
+    }
+
+    pub fn delete_openai_api_key() -> Result<(), SecretsError> {
+        Self::delete_secret(OPENAI_API_KEY_NAME)
+    }
+
+    pub fn has_openai_api_key() -> bool {
+        Self::get_openai_api_key().is_ok()
+    }
+
+    pub fn validate_openai_api_key(api_key: &str) -> Result<(), SecretsError> {
+        let api_key = api_key.trim();
+        if api_key.is_empty() {
+            return Err(SecretsError::InvalidFormat("API key cannot be empty".to_string()));
+        }
+        if api_key.len() > 200 {
+            return Err(SecretsError::InvalidFormat("API key is too long".to_string()));
+        }
+        if !api_key.starts_with("sk-") {
+            return Err(SecretsError::InvalidFormat(
+                "OpenAI API key must start with 'sk-'".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    // ── Deepgram ──────────────────────────────────────────
+
+    pub fn set_deepgram_api_key(api_key: &str) -> Result<(), SecretsError> {
+        Self::validate_deepgram_api_key(api_key)?;
+        Self::set_secret(DEEPGRAM_API_KEY_NAME, api_key.trim())
+    }
+
+    pub fn get_deepgram_api_key() -> Result<String, SecretsError> {
+        Self::get_secret(DEEPGRAM_API_KEY_NAME)
+    }
+
+    pub fn delete_deepgram_api_key() -> Result<(), SecretsError> {
+        Self::delete_secret(DEEPGRAM_API_KEY_NAME)
+    }
+
+    pub fn has_deepgram_api_key() -> bool {
+        Self::get_deepgram_api_key().is_ok()
+    }
+
+    pub fn validate_deepgram_api_key(api_key: &str) -> Result<(), SecretsError> {
+        let api_key = api_key.trim();
+        if api_key.is_empty() {
+            return Err(SecretsError::InvalidFormat("API key cannot be empty".to_string()));
+        }
+        if api_key.len() > 200 {
+            return Err(SecretsError::InvalidFormat("API key is too long".to_string()));
+        }
+        if api_key.len() < 10 {
+            return Err(SecretsError::InvalidFormat("API key is too short".to_string()));
+        }
+        Ok(())
+    }
+
+    // ── Anthropic ─────────────────────────────────────────
+
+    pub fn set_anthropic_api_key(api_key: &str) -> Result<(), SecretsError> {
+        Self::validate_anthropic_api_key(api_key)?;
+        Self::set_secret(ANTHROPIC_API_KEY_NAME, api_key.trim())
+    }
+
+    pub fn get_anthropic_api_key() -> Result<String, SecretsError> {
+        Self::get_secret(ANTHROPIC_API_KEY_NAME)
+    }
+
+    pub fn delete_anthropic_api_key() -> Result<(), SecretsError> {
+        Self::delete_secret(ANTHROPIC_API_KEY_NAME)
+    }
+
+    pub fn has_anthropic_api_key() -> bool {
+        Self::get_anthropic_api_key().is_ok()
+    }
+
+    pub fn validate_anthropic_api_key(api_key: &str) -> Result<(), SecretsError> {
+        let api_key = api_key.trim();
+        if api_key.is_empty() {
+            return Err(SecretsError::InvalidFormat("API key cannot be empty".to_string()));
+        }
+        if api_key.len() > 200 {
+            return Err(SecretsError::InvalidFormat("API key is too long".to_string()));
+        }
+        if !api_key.starts_with("sk-ant-") {
+            return Err(SecretsError::InvalidFormat(
+                "Anthropic API key must start with 'sk-ant-'".to_string(),
+            ));
+        }
+        Ok(())
     }
 
     /// Validate Groq API key format

@@ -91,9 +91,17 @@ impl TranscriptionHistory {
 
     /// Add a new entry to history
     pub fn add(&mut self, entry: HistoryEntry) {
-        // Remove oldest if at capacity
+        // Remove oldest if at capacity, cleaning up associated audio files
         while self.entries.len() >= MAX_HISTORY_ENTRIES {
-            self.entries.pop_back();
+            if let Some(evicted) = self.entries.pop_back() {
+                if let Some(ref audio_path) = evicted.audio_path {
+                    if let Err(e) = std::fs::remove_file(audio_path) {
+                        tracing::debug!("Failed to remove evicted audio file '{}': {}", audio_path, e);
+                    } else {
+                        tracing::debug!("Cleaned up evicted audio file: {}", audio_path);
+                    }
+                }
+            }
         }
 
         // Add new entry at front
@@ -188,7 +196,61 @@ pub fn save_audio_file(
 
 /// Get or initialize the global history instance
 pub fn get_history() -> &'static RwLock<TranscriptionHistory> {
-    HISTORY.get_or_init(|| RwLock::new(TranscriptionHistory::load()))
+    HISTORY.get_or_init(|| {
+        let history = TranscriptionHistory::load();
+        cleanup_orphaned_audio(&history);
+        RwLock::new(history)
+    })
+}
+
+/// Remove audio files that are not referenced by any history entry.
+/// This handles files left behind by previously evicted entries (before the fix)
+/// or from crashes during transcription.
+fn cleanup_orphaned_audio(history: &TranscriptionHistory) {
+    let audio_path = audio_dir();
+    if !audio_path.exists() {
+        return;
+    }
+
+    // Collect all audio paths referenced in history
+    let referenced: std::collections::HashSet<std::path::PathBuf> = history
+        .entries
+        .iter()
+        .filter_map(|e| e.audio_path.as_ref().map(std::path::PathBuf::from))
+        .collect();
+
+    // Scan the audio directory and remove unreferenced .wav files
+    let entries = match std::fs::read_dir(&audio_path) {
+        Ok(entries) => entries,
+        Err(e) => {
+            tracing::warn!("Failed to read audio directory for cleanup: {}", e);
+            return;
+        }
+    };
+
+    let mut cleaned = 0u32;
+    let mut freed_bytes = 0u64;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().is_some_and(|ext| ext == "wav") && !referenced.contains(&path) {
+            if let Ok(metadata) = std::fs::metadata(&path) {
+                freed_bytes += metadata.len();
+            }
+            if let Err(e) = std::fs::remove_file(&path) {
+                tracing::warn!("Failed to remove orphaned audio file '{}': {}", path.display(), e);
+            } else {
+                cleaned += 1;
+            }
+        }
+    }
+
+    if cleaned > 0 {
+        tracing::info!(
+            "Cleaned up {} orphaned audio file(s), freed {:.1} MB",
+            cleaned,
+            freed_bytes as f64 / 1_048_576.0
+        );
+    }
 }
 
 /// Add a transcription to history

@@ -150,7 +150,7 @@ describe('Onboarding', () => {
       goToThemeStep();
 
       const systemButton = screen.getByText('System').closest('button');
-      expect(systemButton).toHaveClass('border-indigo-500');
+      expect(systemButton).toHaveClass('border-accent');
     });
 
     it('should allow selecting Light theme', () => {
@@ -160,7 +160,7 @@ describe('Onboarding', () => {
       const lightButton = screen.getByText('Light').closest('button');
       fireEvent.click(lightButton!);
 
-      expect(lightButton).toHaveClass('border-indigo-500');
+      expect(lightButton).toHaveClass('border-accent');
       expect(document.documentElement.classList.contains('dark')).toBe(false);
     });
 
@@ -171,7 +171,7 @@ describe('Onboarding', () => {
       const darkButton = screen.getByText('Dark').closest('button');
       fireEvent.click(darkButton!);
 
-      expect(darkButton).toHaveClass('border-indigo-500');
+      expect(darkButton).toHaveClass('border-accent');
       expect(document.documentElement.classList.contains('dark')).toBe(true);
     });
 
@@ -283,7 +283,7 @@ describe('Onboarding', () => {
       goToModelStep();
 
       const smallButton = screen.getByText('Small').closest('button');
-      expect(smallButton).toHaveClass('border-indigo-500');
+      expect(smallButton).toHaveClass('border-accent');
     });
 
     it('should allow selecting a different model', () => {
@@ -293,7 +293,7 @@ describe('Onboarding', () => {
       const baseButton = screen.getByText('Base').closest('button');
       fireEvent.click(baseButton!);
 
-      expect(baseButton).toHaveClass('border-indigo-500');
+      expect(baseButton).toHaveClass('border-accent');
     });
 
     it('should show download button for selected model', () => {

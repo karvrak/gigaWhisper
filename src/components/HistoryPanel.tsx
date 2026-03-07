@@ -152,7 +152,7 @@ export function HistoryPanel() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -161,7 +161,7 @@ export function HistoryPanel() {
     <div className="space-y-4 max-w-2xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Transcription History</h2>
+        <h2 className="text-lg font-semibold">Transcription History</h2>
         {entries.length > 0 && (
           <button
             onClick={() => setShowClearConfirm(true)}
@@ -176,11 +176,11 @@ export function HistoryPanel() {
       {/* Empty state */}
       {entries.length === 0 && (
         <div className="card p-12 text-center">
-          <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-[#252136]/50 flex items-center justify-center">
-            <Clock className="w-7 h-7 text-gray-400 dark:text-gray-500" />
+          <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-surface-tertiary flex items-center justify-center">
+            <Clock className="w-7 h-7 text-content-tertiary" />
           </div>
-          <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No transcriptions yet</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="font-medium mb-1">No transcriptions yet</p>
+          <p className="text-sm text-content-secondary">
             Your transcription history will appear here
           </p>
         </div>
@@ -194,12 +194,12 @@ export function HistoryPanel() {
             className="card p-4 group hover:shadow-md transition-shadow duration-200"
           >
             {/* Text content */}
-            <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+            <p className="text-sm whitespace-pre-wrap break-words">
               {entry.text}
             </p>
 
             {/* Metadata and actions */}
-            <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-3 flex items-center justify-between text-xs text-content-secondary">
               <div className="flex items-center gap-3">
                 {/* Play button */}
                 {entry.audio_path && (
@@ -208,8 +208,8 @@ export function HistoryPanel() {
                     disabled={loadingAudioId === entry.id}
                     className={`p-1.5 rounded transition-colors ${
                       playingId === entry.id
-                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600'
-                        : 'hover:bg-gray-100 dark:hover:bg-[#252136]'
+                        ? 'bg-accent/10 text-accent'
+                        : 'hover:bg-surface-tertiary'
                     }`}
                     title={playingId === entry.id ? 'Stop' : 'Play audio'}
                   >
@@ -230,7 +230,7 @@ export function HistoryPanel() {
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => copyToClipboard(entry.text, entry.id)}
-                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#252136] rounded transition-colors"
+                  className="p-1.5 hover:bg-surface-tertiary rounded transition-colors"
                   title="Copy to clipboard"
                 >
                   {copiedId === entry.id ? (
@@ -261,20 +261,20 @@ export function HistoryPanel() {
             onClick={() => setShowClearConfirm(false)}
           />
           {/* Modal */}
-          <div className="modal-content relative bg-white dark:bg-[#1a1725] rounded-xl shadow-xl p-6 max-w-sm mx-4">
+          <div className="modal-content relative bg-surface-secondary rounded-xl shadow-xl p-6 max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2.5 bg-red-50 dark:bg-red-500/10 rounded-xl">
                 <AlertTriangle className="w-5 h-5 text-red-500" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Clear All History</h3>
+              <h3 className="text-lg font-semibold">Clear All History</h3>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+            <p className="text-sm text-content-secondary mb-6 leading-relaxed">
               Are you sure you want to delete all transcriptions? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#252136]/50 rounded-lg transition-colors duration-150"
+                className="px-4 py-2 text-sm font-medium text-content-secondary hover:bg-surface-tertiary rounded-lg transition-colors duration-150"
               >
                 Cancel
               </button>

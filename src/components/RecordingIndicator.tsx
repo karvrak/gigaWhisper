@@ -24,7 +24,7 @@ export function RecordingIndicator({ state }: RecordingIndicatorProps) {
       <div
         className={`w-12 h-12 rounded-full flex items-center justify-center ${
           state.state === 'idle'
-            ? 'bg-gray-100 dark:bg-[#252136] text-gray-500'
+            ? 'bg-surface-tertiary text-content-tertiary'
             : state.state === 'recording'
             ? 'bg-red-100 dark:bg-red-900/30 text-red-600 animate-pulse'
             : state.state === 'processing'
@@ -42,7 +42,7 @@ export function RecordingIndicator({ state }: RecordingIndicatorProps) {
       <div>
         <div className="font-medium capitalize">{state.state}</div>
         {state.state === 'recording' && state.duration_ms !== undefined && (
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-sm text-content-secondary">
             {formatDuration(state.duration_ms)}
           </div>
         )}
