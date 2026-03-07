@@ -1,6 +1,6 @@
 [package]
 name = "gigawhisper"
-version = "1.0.10"
+version = "1.0.11"
 description = "Open-source voice transcription app for Windows"
 authors = ["GigaWhisper Contributors"]
 edition = "2021"
