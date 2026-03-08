@@ -82,7 +82,10 @@ pub async fn activate_license(
 
 /// Deactivate the premium license
 #[tauri::command]
-pub async fn deactivate_license(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String> {
+pub async fn deactivate_license(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
     let mut manager = LicenseManager::new();
 
     // Restore license key from credential manager so the server can be notified
