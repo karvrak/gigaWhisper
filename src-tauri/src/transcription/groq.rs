@@ -59,6 +59,18 @@ impl GroqProvider {
         }
     }
 
+    /// Create a provider with no API key (for testing)
+    #[cfg(test)]
+    fn without_api_key() -> Self {
+        Self {
+            model: "whisper-large-v3".to_string(),
+            client: reqwest::Client::new(),
+            timeout: Duration::from_secs(DEFAULT_TIMEOUT_SECONDS),
+            max_retries: DEFAULT_MAX_RETRIES,
+            api_key: None,
+        }
+    }
+
     /// Get API key from secure storage
     fn get_api_key(&self) -> Option<String> {
         self.api_key.clone()
@@ -513,7 +525,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_transcribe_without_api_key() {
-        let provider = GroqProvider::new(None);
+        let provider = GroqProvider::without_api_key();
         let config = TranscriptionConfig::default();
 
         // Without API key, should fail early

@@ -10,7 +10,7 @@ use thiserror::Error;
 
 const SERVICE_NAME: &str = "gigawhisper";
 const LICENSE_KEY_NAME: &str = "license_key";
-const API_BASE_URL: &str = "https://gigawhisper.dev.genesisai.fr/api/v1/license";
+const API_BASE_URL: &str = "https://gigawhisper.com/api/v1/license";
 const REVALIDATION_INTERVAL_SECS: u64 = 24 * 60 * 60; // 24 hours
 
 /// License validation errors

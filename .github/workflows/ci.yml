@@ -244,8 +244,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
+        run: pnpm tauri build --verbose --no-bundle
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: --verbose
