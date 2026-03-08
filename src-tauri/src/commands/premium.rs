@@ -5,6 +5,7 @@
 use crate::licensing::{FeatureGate, LicenseManager, PremiumFeature};
 use crate::AppState;
 use serde::Serialize;
+use tauri::Emitter;
 
 /// Premium status response sent to frontend
 #[derive(Debug, Clone, Serialize)]
@@ -28,6 +29,7 @@ pub struct FeatureStatus {
 #[tauri::command]
 pub async fn activate_license(
     key: String,
+    app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
 ) -> Result<PremiumStatus, String> {
     // Validate license key input
@@ -72,12 +74,15 @@ pub async fn activate_license(
         config.save().map_err(|e| e.to_string())?;
     }
 
+    // Notify all frontend components that premium status changed
+    let _ = app.emit("premium:changed", ());
+
     get_premium_status(state).await
 }
 
 /// Deactivate the premium license
 #[tauri::command]
-pub async fn deactivate_license(state: tauri::State<'_, AppState>) -> Result<(), String> {
+pub async fn deactivate_license(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String> {
     let mut manager = LicenseManager::new();
 
     // Restore license key from credential manager so the server can be notified
@@ -99,6 +104,9 @@ pub async fn deactivate_license(state: tauri::State<'_, AppState>) -> Result<(),
         config.premium.last_validated = None;
         config.save().map_err(|e| e.to_string())?;
     }
+
+    // Notify all frontend components that premium status changed
+    let _ = app.emit("premium:changed", ());
 
     Ok(())
 }

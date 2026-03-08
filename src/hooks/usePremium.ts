@@ -27,6 +27,7 @@ export function usePremium() {
   // Listen for credit updates
   useEffect(() => {
     const unsubscribes = [
+      listen('premium:changed', () => loadStatus()),
       listen('credits:updated', () => loadStatus()),
       listen('credits:low', () => loadStatus()),
       listen('credits:depleted', () => loadStatus()),
