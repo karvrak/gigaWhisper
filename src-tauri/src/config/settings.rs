@@ -65,10 +65,10 @@ impl Settings {
             TranscriptionProvider::Groq if !self.transcription.groq.has_api_key() => {
                 return Err(SettingsError::MissingApiKey);
             }
-            TranscriptionProvider::OpenAi if !self.transcription.openai.api_key_configured => {
+            TranscriptionProvider::OpenAi if !super::SecretsManager::has_openai_api_key() => {
                 return Err(SettingsError::MissingApiKey);
             }
-            TranscriptionProvider::Deepgram if !self.transcription.deepgram.api_key_configured => {
+            TranscriptionProvider::Deepgram if !super::SecretsManager::has_deepgram_api_key() => {
                 return Err(SettingsError::MissingApiKey);
             }
             _ => {}
@@ -110,6 +110,21 @@ impl Settings {
     /// Save settings to disk
     pub fn save(&self) -> Result<(), SettingsError> {
         super::store::save_settings(self)
+    }
+
+    /// Sync api_key_configured flags with the actual Credential Manager state.
+    ///
+    /// This ensures that keys persisted in Windows Credential Manager across
+    /// reinstalls are detected even when the config JSON has been reset.
+    pub fn sync_api_key_flags(&mut self) {
+        self.transcription.groq.api_key_configured = super::SecretsManager::has_groq_api_key();
+        self.transcription.openai.api_key_configured = super::SecretsManager::has_openai_api_key();
+        self.transcription.deepgram.api_key_configured =
+            super::SecretsManager::has_deepgram_api_key();
+        self.post_processing.openai.api_key_configured =
+            super::SecretsManager::has_openai_api_key();
+        self.post_processing.anthropic.api_key_configured =
+            super::SecretsManager::has_anthropic_api_key();
     }
 }
 
@@ -563,9 +578,9 @@ impl GroqSettings {
         Ok(())
     }
 
-    /// Check if API key is available
+    /// Check if API key is available in secure storage (Credential Manager)
     pub fn has_api_key(&self) -> bool {
-        self.api_key_configured && super::SecretsManager::has_groq_api_key()
+        super::SecretsManager::has_groq_api_key()
     }
 }
 

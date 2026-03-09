@@ -277,11 +277,15 @@ impl TranscriptionService {
     }
 
     /// Process recording: resample, apply VAD, transcribe, and output
+    ///
+    /// `context_override` is the temporary context resolved at recording start
+    /// (from context shortcut or auto-switch). If None, uses `active_context` from config.
     pub async fn process_recording(
         self: &Arc<Self>,
         app: &AppHandle,
         raw_samples: Vec<f32>,
         device_sample_rate: u32,
+        context_override: Option<String>,
     ) -> Result<String, String> {
         use tauri_plugin_notification::NotificationExt;
 
@@ -301,34 +305,15 @@ impl TranscriptionService {
             return Err("Recording too short".to_string());
         }
 
-        // Get config and apply active context overrides
+        // Get config and apply context overrides
+        // Use the context_override from recording start, or fall back to active_context
         let config = {
             let mut cfg = state.config.read().clone();
-            let mut active_id = cfg.contexts.active_context.clone();
-
-            // Feature: Per-app context auto-switching
-            // Check if the active window matches any context's app_patterns
-            if let Some(window) = output::get_active_window() {
-                let process_lower = window.process_name.to_lowercase();
-                let title_lower = window.title.to_lowercase();
-                for ctx in &cfg.contexts.contexts {
-                    if ctx.id != "default" && !ctx.app_patterns.is_empty() {
-                        let matches = ctx.app_patterns.iter().any(|pattern| {
-                            let p = pattern.to_lowercase();
-                            process_lower.contains(&p) || title_lower.contains(&p)
-                        });
-                        if matches {
-                            tracing::info!(
-                                "Auto-switched to context '{}' (matched app: {})",
-                                ctx.name,
-                                window.process_name
-                            );
-                            active_id = ctx.id.clone();
-                            break;
-                        }
-                    }
-                }
-            }
+            let active_id = if let Some(ref override_id) = context_override {
+                override_id.clone()
+            } else {
+                cfg.contexts.active_context.clone()
+            };
 
             if let Some(ctx) = cfg
                 .contexts

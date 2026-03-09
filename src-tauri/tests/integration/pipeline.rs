@@ -1019,6 +1019,7 @@ mod language_config_tests {
         let config = TranscriptionConfig {
             language: "auto".to_string(),
             translate: false,
+            prompt: None,
         };
 
         let result = orchestrator.transcribe(&audio, &config).await;
@@ -1036,6 +1037,7 @@ mod language_config_tests {
             let config = TranscriptionConfig {
                 language: lang.to_string(),
                 translate: false,
+                prompt: None,
             };
 
             let result = orchestrator.transcribe(&audio, &config).await;
@@ -1053,6 +1055,7 @@ mod language_config_tests {
         let config = TranscriptionConfig {
             language: "fr".to_string(),
             translate: true, // Translate French to English
+            prompt: None,
         };
 
         let result = orchestrator.transcribe(&audio, &config).await;

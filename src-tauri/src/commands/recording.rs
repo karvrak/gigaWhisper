@@ -51,9 +51,10 @@ pub async fn start_recording(
     // Store capture handle
     *state.audio_capture.lock() = Some(audio_capture);
 
-    // Update state
+    // Update state (no context override when started from UI command)
     *state.recording_state.write() = RecordingState::Recording {
         started_at: std::time::Instant::now(),
+        context_override: None,
     };
 
     // Notify user
@@ -93,11 +94,14 @@ pub async fn stop_recording(
         }
     };
 
-    // Check duration
-    let duration = {
+    // Check duration and extract context override
+    let (duration, context_override) = {
         let recording_state = state.recording_state.read();
         match &*recording_state {
-            RecordingState::Recording { started_at } => started_at.elapsed(),
+            RecordingState::Recording {
+                started_at,
+                context_override,
+            } => (started_at.elapsed(), context_override.clone()),
             _ => return Err("Not recording".to_string()),
         }
     };
@@ -112,10 +116,10 @@ pub async fn stop_recording(
     *state.recording_state.write() = RecordingState::Processing;
     let _ = app.emit("recording:processing", ());
 
-    // Use transcription service
+    // Use transcription service, passing the temporary context override
     let service = state.transcription_service.clone();
     let result = service
-        .process_recording(&app, raw_samples, device_sample_rate)
+        .process_recording(&app, raw_samples, device_sample_rate, context_override)
         .await;
 
     // Update state based on result
@@ -172,7 +176,7 @@ pub fn get_recording_state(state: State<'_, AppState>) -> RecordingStateDto {
             duration_ms: None,
             error: None,
         },
-        RecordingState::Recording { started_at } => RecordingStateDto {
+        RecordingState::Recording { started_at, .. } => RecordingStateDto {
             state: "recording".to_string(),
             duration_ms: Some(started_at.elapsed().as_millis() as u64),
             error: None,

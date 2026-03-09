@@ -99,46 +99,40 @@ fn register_context_shortcuts_from_config(
     Ok(())
 }
 
-/// Handle record shortcut event, optionally switching active context first
+/// Handle record shortcut event, optionally with a temporary context override
 fn handle_record_shortcut(
     app: &AppHandle,
     _shortcut: &Shortcut,
     event: ShortcutState,
     context_id: Option<String>,
 ) {
-    let state = app.state::<AppState>();
-
-    // If a context shortcut triggered this, switch active context
+    // context_id is a temporary override for this recording only - do NOT persist it
     if let Some(ref ctx_id) = context_id {
-        let mut config = state.config.write();
-        if config.contexts.active_context != *ctx_id {
-            config.contexts.active_context = ctx_id.clone();
-            let _ = config.save();
-            tracing::info!("Switched active context to '{}'", ctx_id);
-        }
+        tracing::info!("Context shortcut triggered with temporary override: '{}'", ctx_id);
     }
 
+    let state = app.state::<AppState>();
     let config = state.config.read();
 
     match config.recording.mode {
         crate::config::RecordingMode::PushToTalk => {
-            handle_push_to_talk(app, event);
+            handle_push_to_talk(app, event, context_id);
         }
         crate::config::RecordingMode::Toggle => {
-            handle_toggle(app, event);
+            handle_toggle(app, event, context_id);
         }
     }
 }
 
 /// Handle push-to-talk mode
-fn handle_push_to_talk(app: &AppHandle, event: ShortcutState) {
+fn handle_push_to_talk(app: &AppHandle, event: ShortcutState, context_id: Option<String>) {
     let app_clone = app.clone();
 
     match event {
         ShortcutState::Pressed => {
             tracing::debug!("PTT: Key pressed, starting recording");
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = start_recording_internal(&app_clone).await {
+                if let Err(e) = start_recording_internal(&app_clone, context_id).await {
                     tracing::error!("Failed to start recording: {}", e);
                 }
             });
@@ -155,7 +149,7 @@ fn handle_push_to_talk(app: &AppHandle, event: ShortcutState) {
 }
 
 /// Handle toggle mode
-fn handle_toggle(app: &AppHandle, event: ShortcutState) {
+fn handle_toggle(app: &AppHandle, event: ShortcutState, context_id: Option<String>) {
     if event != ShortcutState::Pressed {
         return;
     }
@@ -176,7 +170,7 @@ fn handle_toggle(app: &AppHandle, event: ShortcutState) {
         Some(true) => {
             tracing::debug!("Toggle: Starting recording");
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = start_recording_internal(&app_clone).await {
+                if let Err(e) = start_recording_internal(&app_clone, context_id).await {
                     tracing::error!("Failed to start recording: {}", e);
                 }
             });
@@ -244,7 +238,7 @@ pub fn handle_mouse_event(app: &AppHandle, is_pressed: bool) {
             if is_pressed {
                 tracing::debug!("Mouse PTT: Button pressed, starting recording");
                 tauri::async_runtime::spawn(async move {
-                    if let Err(e) = start_recording_internal(&app_clone).await {
+                    if let Err(e) = start_recording_internal(&app_clone, None).await {
                         tracing::error!("Failed to start recording: {}", e);
                     }
                 });
@@ -276,7 +270,7 @@ pub fn handle_mouse_event(app: &AppHandle, is_pressed: bool) {
                 Some(true) => {
                     tracing::debug!("Mouse Toggle: Starting recording");
                     tauri::async_runtime::spawn(async move {
-                        if let Err(e) = start_recording_internal(&app_clone).await {
+                        if let Err(e) = start_recording_internal(&app_clone, None).await {
                             tracing::error!("Failed to start recording: {}", e);
                         }
                     });
@@ -298,7 +292,14 @@ pub fn handle_mouse_event(app: &AppHandle, is_pressed: bool) {
 }
 
 /// Internal function to start recording
-async fn start_recording_internal(app: &AppHandle) -> Result<(), String> {
+///
+/// `context_override` is a temporary context from a context shortcut.
+/// Priority: context_override > auto-switch (app patterns) > active_context from config.
+/// None of these overrides are persisted to config.
+async fn start_recording_internal(
+    app: &AppHandle,
+    context_override: Option<String>,
+) -> Result<(), String> {
     let state = app.state::<AppState>();
 
     // Check current state
@@ -337,13 +338,64 @@ async fn start_recording_internal(app: &AppHandle) -> Result<(), String> {
     // Store capture handle
     *state.audio_capture.lock() = Some(audio_capture);
 
-    // Update state
-    *state.recording_state.write() = RecordingState::Recording {
-        started_at: std::time::Instant::now(),
+    // Resolve the effective context for this recording (temporary, not persisted)
+    // Priority: context shortcut > auto-switch by app > active_context from config (None)
+    let effective_context: Option<String> = if context_override.is_some() {
+        // Context shortcut takes highest priority
+        tracing::info!(
+            "Using context shortcut override: '{}'",
+            context_override.as_deref().unwrap_or_default()
+        );
+        context_override
+    } else {
+        // Check auto-switch based on focused application
+        let config = state.config.read();
+        let has_patterns = config
+            .contexts
+            .contexts
+            .iter()
+            .any(|c| c.id != "default" && !c.app_patterns.is_empty());
+
+        if has_patterns {
+            if let Some(window) = crate::output::get_active_window() {
+                let process_lower = window.process_name.to_lowercase();
+                let title_lower = window.title.to_lowercase();
+                config
+                    .contexts
+                    .contexts
+                    .iter()
+                    .find(|ctx| {
+                        ctx.id != "default"
+                            && !ctx.app_patterns.is_empty()
+                            && ctx.app_patterns.iter().any(|pattern| {
+                                let p = pattern.to_lowercase();
+                                process_lower.contains(&p) || title_lower.contains(&p)
+                            })
+                    })
+                    .map(|ctx| {
+                        tracing::info!(
+                            "Auto-switched to context '{}' (app: {})",
+                            ctx.name,
+                            window.process_name
+                        );
+                        ctx.id.clone()
+                    })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     };
 
-    // Show recording indicator
-    show_recording_indicator(app);
+    // Update state with the temporary context override
+    *state.recording_state.write() = RecordingState::Recording {
+        started_at: std::time::Instant::now(),
+        context_override: effective_context.clone(),
+    };
+
+    // Show recording indicator with the effective context
+    show_recording_indicator(app, effective_context.as_deref());
 
     // Emit event
     let _ = app.emit("recording:state-changed", "recording");
@@ -412,11 +464,14 @@ async fn stop_recording_internal(app: &AppHandle) -> Result<String, String> {
         }
     }
 
-    // Check duration
-    let duration = {
+    // Extract duration and context override from recording state
+    let (duration, context_override) = {
         let recording_state = state.recording_state.read();
         match &*recording_state {
-            RecordingState::Recording { started_at } => started_at.elapsed(),
+            RecordingState::Recording {
+                started_at,
+                context_override,
+            } => (started_at.elapsed(), context_override.clone()),
             _ => {
                 hide_recording_indicator(app);
                 return Err("Not recording".to_string());
@@ -442,10 +497,10 @@ async fn stop_recording_internal(app: &AppHandle) -> Result<String, String> {
         return Err("Recording too short".to_string());
     }
 
-    // Use transcription service
+    // Use transcription service, passing the temporary context override
     let service = state.transcription_service.clone();
     let result = service
-        .process_recording(app, raw_samples, device_sample_rate)
+        .process_recording(app, raw_samples, device_sample_rate, context_override)
         .await;
 
     // Update state based on result
@@ -467,15 +522,19 @@ async fn stop_recording_internal(app: &AppHandle) -> Result<String, String> {
 }
 
 /// Show the recording indicator overlay window
-fn show_recording_indicator(app: &AppHandle) {
+///
+/// `context_override` is the temporary context for this recording.
+/// If None, uses the user's default `active_context` from config.
+fn show_recording_indicator(app: &AppHandle, context_override: Option<&str>) {
     let state = app.state::<AppState>();
     let (show_indicator, context_color) = {
         let config = state.config.read();
+        let ctx_id = context_override.unwrap_or(&config.contexts.active_context);
         let color = config
             .contexts
             .contexts
             .iter()
-            .find(|c| c.id == config.contexts.active_context)
+            .find(|c| c.id == ctx_id)
             .and_then(|c| c.color.clone());
         (config.ui.show_indicator, color)
     };
@@ -870,6 +929,7 @@ mod tests {
         fn test_toggle_recording_pressed_stops() {
             let state = RecordingState::Recording {
                 started_at: std::time::Instant::now(),
+                context_override: None,
             };
             let action = determine_toggle_action(ShortcutState::Pressed, &state);
             assert_eq!(action, RecordingAction::StopRecording);
@@ -897,6 +957,7 @@ mod tests {
                 RecordingState::Idle,
                 RecordingState::Recording {
                     started_at: std::time::Instant::now(),
+                    context_override: None,
                 },
                 RecordingState::Processing,
                 RecordingState::Error("Test".to_string()),
@@ -924,6 +985,7 @@ mod tests {
             // 2. Now recording, press again to stop
             let state2 = RecordingState::Recording {
                 started_at: std::time::Instant::now(),
+                context_override: None,
             };
             let action2 = determine_toggle_action(ShortcutState::Pressed, &state2);
             assert_eq!(action2, RecordingAction::StopRecording);
@@ -958,10 +1020,11 @@ mod tests {
             let before = std::time::Instant::now();
             let state = RecordingState::Recording {
                 started_at: std::time::Instant::now(),
+                context_override: None,
             };
             let after = std::time::Instant::now();
 
-            if let RecordingState::Recording { started_at } = state {
+            if let RecordingState::Recording { started_at, .. } = state {
                 assert!(started_at >= before);
                 assert!(started_at <= after);
             } else {
@@ -1068,6 +1131,7 @@ mod tests {
                     assert_eq!(action, RecordingAction::StartRecording);
                     state = RecordingState::Recording {
                         started_at: std::time::Instant::now(),
+                        context_override: None,
                     };
                 } else {
                     assert_eq!(action, RecordingAction::StopRecording);
@@ -1208,6 +1272,7 @@ mod tests {
             // Recording is now active
             let recording_state = RecordingState::Recording {
                 started_at: std::time::Instant::now(),
+                context_override: None,
             };
 
             // User releases key
@@ -1229,6 +1294,7 @@ mod tests {
             // Release is ignored in toggle mode
             let recording_state = RecordingState::Recording {
                 started_at: std::time::Instant::now(),
+                context_override: None,
             };
             let action2 =
                 simulate_shortcut_handling(mode.clone(), ShortcutState::Released, &recording_state);

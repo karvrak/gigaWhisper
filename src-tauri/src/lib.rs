@@ -38,6 +38,9 @@ pub enum RecordingState {
     Idle,
     Recording {
         started_at: std::time::Instant,
+        /// Temporary context override for this recording only (from shortcut or auto-switch).
+        /// None means use the user's default `active_context` from config.
+        context_override: Option<String>,
     },
     Processing,
     Error(String),
@@ -115,8 +118,14 @@ pub fn run() {
         tracing::info!("First launch detected - will show onboarding");
     }
 
-    // Load configuration
-    let config = config::Settings::load().unwrap_or_default();
+    // Load configuration and sync API key flags with Credential Manager.
+    // This ensures keys that survive a reinstall (stored in Windows Credential
+    // Manager) are detected even if the config JSON was reset.
+    let mut config = config::Settings::load().unwrap_or_default();
+    config.sync_api_key_flags();
+    if let Err(e) = config.save() {
+        tracing::warn!("Failed to persist synced API key flags: {}", e);
+    }
 
     // Create transcription service
     let transcription_service = Arc::new(transcription::TranscriptionService::new());
