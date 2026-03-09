@@ -186,6 +186,19 @@ pub fn run() {
                 );
             }
 
+            // Preload Whisper model in background for faster first transcription (GPU warmup)
+            {
+                let service = state.transcription_service.clone();
+                let preload_config = state.config.read().clone();
+                tauri::async_runtime::spawn(async move {
+                    // Small delay to not block UI startup
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    if let Err(e) = service.preload_model(&preload_config) {
+                        tracing::warn!("Failed to preload transcription model: {}", e);
+                    }
+                });
+            }
+
             // Check for updates in the background
             let app_handle = app.handle().clone();
             let auto_update = config.ui.auto_update;

@@ -726,9 +726,9 @@ impl Default for UiSettings {
             indicator_position: IndicatorPosition::Cursor,
             theme: Theme::System,
             start_minimized: false,
-            auto_start: false,
+            auto_start: true,
             minimize_to_tray: true,
-            auto_update: false,
+            auto_update: true,
             custom_theme: None,
         }
     }

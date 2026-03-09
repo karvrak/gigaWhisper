@@ -91,7 +91,7 @@ export function HistoryPanel() {
       };
 
       audio.onerror = () => {
-        console.error('Audio playback error');
+        console.error('Audio playback error:', audio.error?.code, audio.error?.message);
         setPlayingId(null);
         audioRef.current = null;
       };
