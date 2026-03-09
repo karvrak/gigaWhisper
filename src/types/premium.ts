@@ -32,6 +32,8 @@ export interface TranscriptionContext {
   post_processing: ContextPostProcessing | null;
   color: string | null;
   icon: string | null;
+  custom_vocabulary: string | null;
+  app_patterns: string[];
 }
 
 export interface ContextPostProcessing {

@@ -85,12 +85,15 @@ const mockSettings = {
       post_processing: null,
       color: null,
       icon: null,
+      custom_vocabulary: null,
+      app_patterns: [],
     }],
   },
   post_processing: {
     enabled: false,
     default_provider: 'groq-llm' as const,
     default_prompt: 'Clean up and fix any errors in this transcription.',
+    remove_filler_words: false,
     openai: {
       api_key_configured: false,
       model: 'gpt-4o-mini',
@@ -166,13 +169,20 @@ describe('useSettings', () => {
       },
     };
 
-    await act(async () => {
-      await result.current.updateSettings(updatedSettings);
+    act(() => {
+      result.current.updateSettings(updatedSettings);
     });
 
     expect(result.current.settings?.recording.mode).toBe('toggle');
-    expect(result.current.saving).toBe(false);
-    expect(invoke).toHaveBeenCalledWith('save_settings', { settings: updatedSettings });
+
+    // Wait for debounced save to complete
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('save_settings', { settings: updatedSettings });
+    }, { timeout: 1000 });
+
+    await waitFor(() => {
+      expect(result.current.saving).toBe(false);
+    });
   });
 
   it('should handle save error', async () => {
@@ -195,11 +205,15 @@ describe('useSettings', () => {
       },
     };
 
-    await act(async () => {
-      await result.current.updateSettings(updatedSettings);
+    act(() => {
+      result.current.updateSettings(updatedSettings);
     });
 
-    expect(result.current.error).toContain(errorMessage);
+    // Wait for debounced save to complete and error to be set
+    await waitFor(() => {
+      expect(result.current.error).toContain(errorMessage);
+    }, { timeout: 1000 });
+
     expect(result.current.saving).toBe(false);
   });
 

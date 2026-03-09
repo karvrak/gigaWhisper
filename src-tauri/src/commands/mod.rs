@@ -2,6 +2,7 @@
 //!
 //! IPC commands exposed to the frontend.
 
+pub mod apps;
 pub mod clipboard;
 pub mod contexts;
 pub mod history;

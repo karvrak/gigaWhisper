@@ -19,6 +19,13 @@ impl OpenAiLlm {
         }
     }
 
+    pub fn with_client(model: Option<String>, client: reqwest::Client) -> Self {
+        Self {
+            model: model.unwrap_or_else(|| "gpt-4o-mini".to_string()),
+            client,
+        }
+    }
+
     fn get_api_key(&self) -> Option<String> {
         SecretsManager::get_secret("openai_api_key").ok()
     }

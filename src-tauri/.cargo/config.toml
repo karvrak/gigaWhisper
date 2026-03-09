@@ -65,14 +65,8 @@ rustflags = ["-C", "target-cpu=native"]
 # =============================================================================
 
 [alias]
-# Build with GPU support (Vulkan - AMD/Intel/NVIDIA)
-build-vulkan = "build --release --features gpu-vulkan"
-
-# Build with GPU support (CUDA - NVIDIA only, best performance)
-build-cuda = "build --release --features gpu-cuda"
-
-# Build CPU-only (maximum compatibility)
-build-cpu = "build --release"
+# Standard build (includes Vulkan GPU support by default)
+build-release = "build --release"
 
 # Build with haswell target (AVX2 baseline for distribution)
 build-dist = "build --release --config target.x86_64-pc-windows-msvc.rustflags=['-C','target-cpu=haswell']"

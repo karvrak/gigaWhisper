@@ -17,6 +17,11 @@ export function ContextManager() {
     openai: settings.transcription.openai.api_key_configured,
     deepgram: settings.transcription.deepgram.api_key_configured,
   } : { groq: false, openai: false, deepgram: false };
+  const llmProviderAvailability = settings ? {
+    groq_llm: settings.transcription.groq.api_key_configured,
+    openai: settings.post_processing.openai.api_key_configured,
+    anthropic: settings.post_processing.anthropic.api_key_configured,
+  } : { groq_llm: false, openai: false, anthropic: false };
   const canUseContexts = isFeatureAvailable('multi-context');
   const [editingContext, setEditingContext] = useState<TranscriptionContext | null>(null);
   const [showPresetPicker, setShowPresetPicker] = useState(false);
@@ -38,6 +43,8 @@ export function ContextManager() {
       post_processing: preset?.postProcessing ?? null,
       color: preset?.color ?? null,
       icon: preset?.icon ?? null,
+      custom_vocabulary: preset?.customVocabulary ?? null,
+      app_patterns: preset?.appPatterns ?? [],
     };
     setShowPresetPicker(false);
     setEditingContext(newCtx);
@@ -111,6 +118,16 @@ export function ContextManager() {
         onSave={handleSave}
         onCancel={() => setEditingContext(null)}
         providerAvailability={providerAvailability}
+        llmProviderAvailability={llmProviderAvailability}
+        onNavigateToProviders={() => {
+          // Navigate to transcription tab in settings
+          const tabSelect = document.querySelector('select') as HTMLSelectElement;
+          if (tabSelect) {
+            tabSelect.value = 'transcription';
+            tabSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          setEditingContext(null);
+        }}
       />
     );
   }

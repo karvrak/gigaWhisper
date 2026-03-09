@@ -1,20 +1,19 @@
 //! Auto-update module for GigaWhisper
 //!
 //! Checks for updates on application startup and notifies the user.
-//! Supports variant-aware updates (CPU/Vulkan/CUDA).
+//! Uses a single update manifest (latest.json) since there is only one build variant.
 
-use crate::build_info::{BUILD_VARIANT, BUILD_VARIANT_DISPLAY};
 use tauri::{AppHandle, Emitter, Runtime};
 use tauri_plugin_updater::{Update, UpdaterExt};
 
 /// GitHub repository for update endpoints
 const GITHUB_REPO: &str = "karvrak/gigaWhisper";
 
-/// Get the update endpoint URL for the current build variant
+/// Get the update endpoint URL (single manifest for all builds)
 fn get_update_endpoint() -> String {
     format!(
-        "https://github.com/{}/releases/latest/download/latest-{}.json",
-        GITHUB_REPO, BUILD_VARIANT
+        "https://github.com/{}/releases/latest/download/latest.json",
+        GITHUB_REPO
     )
 }
 
@@ -22,8 +21,7 @@ fn get_update_endpoint() -> String {
 /// If `auto_install` is true, the update is downloaded and installed automatically.
 pub async fn check_for_updates<R: Runtime>(app: AppHandle<R>, auto_install: bool) {
     tracing::info!(
-        "Checking for updates (variant: {}, auto_install: {})...",
-        BUILD_VARIANT,
+        "Checking for updates (auto_install: {})...",
         auto_install
     );
     tracing::debug!("Update endpoint: {}", get_update_endpoint());
@@ -65,7 +63,6 @@ pub async fn check_for_updates<R: Runtime>(app: AppHandle<R>, auto_install: bool
                     current_version: update.current_version.to_string(),
                     new_version: update.version.clone(),
                     body: update.body.clone(),
-                    variant: BUILD_VARIANT.to_string(),
                 },
             ) {
                 tracing::error!("Failed to emit update-available event: {}", e);
@@ -94,7 +91,6 @@ pub struct UpdateInfo {
     pub current_version: String,
     pub new_version: String,
     pub body: Option<String>,
-    pub variant: String,
 }
 
 /// Download and install update, emitting progress events
@@ -133,7 +129,7 @@ async fn do_install_update<R: Runtime>(app: &AppHandle<R>, update: Update) -> Re
 /// Download and install the update (called from frontend)
 #[tauri::command]
 pub async fn install_update(app: AppHandle) -> Result<(), String> {
-    tracing::info!("Installing update for variant: {}", BUILD_VARIANT);
+    tracing::info!("Installing update...");
 
     let endpoint: tauri::Url = get_update_endpoint()
         .parse()
@@ -168,21 +164,4 @@ pub struct DownloadProgress {
 pub fn restart_app(app: AppHandle) {
     tracing::info!("Restarting application to apply update...");
     app.restart();
-}
-
-/// Get the current build variant (cpu, vulkan, cuda)
-#[tauri::command]
-pub fn get_build_variant() -> BuildVariantInfo {
-    BuildVariantInfo {
-        variant: BUILD_VARIANT.to_string(),
-        display_name: BUILD_VARIANT_DISPLAY.to_string(),
-    }
-}
-
-/// Build variant information
-#[derive(Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BuildVariantInfo {
-    pub variant: String,
-    pub display_name: String,
 }

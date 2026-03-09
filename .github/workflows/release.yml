@@ -69,17 +69,15 @@ jobs:
 
             ## Installation
 
-            Download the installer for your system:
+            Download the installer:
 
-            | Variant | Description | Download |
-            |---------|-------------|----------|
-            | **CPU** | Works on all systems | \`GigaWhisper_${version}_x64-cpu-setup.exe\` |
-            | **Vulkan** | GPU acceleration (AMD/Intel/NVIDIA) | \`GigaWhisper_${version}_x64-vulkan-setup.exe\` |
-            | **CUDA** | Best for NVIDIA GPUs | \`GigaWhisper_${version}_x64-cuda-setup.exe\` |
+            | File | Description |
+            |------|-------------|
+            | **\`GigaWhisper_${version}_x64-setup.exe\`** | Windows installer with Vulkan GPU acceleration (AMD/Intel/NVIDIA) and CPU fallback |
 
             ## Auto-Update
 
-            If you already have GigaWhisper installed, you'll be prompted to update automatically (same variant).
+            If you already have GigaWhisper installed, you'll be prompted to update automatically.
 
             ---
             *Full changelog: [CHANGELOG.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CHANGELOG.md)*`;
@@ -117,25 +115,12 @@ jobs:
             return data.id
 
   # ============================================
-  # Build Windows (3 variants)
+  # Build Windows (single Vulkan build)
   # ============================================
   build-windows:
-    name: Build Windows (${{ matrix.variant }})
+    name: Build Windows
     needs: create-release
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - variant: cpu
-            features: ""
-            artifact_suffix: "cpu"
-          - variant: vulkan
-            features: "--features gpu-vulkan"
-            artifact_suffix: "vulkan"
-          - variant: cuda
-            features: "--features gpu-cuda"
-            artifact_suffix: "cuda"
 
     steps:
       - uses: actions/checkout@v4
@@ -158,67 +143,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          key: ${{ matrix.variant }}-v3
-          # Fresh cache - v3 to clear corrupted artifact names
+          key: vulkan-v4
 
-      # CUDA setup (only for cuda variant)
-      - name: Setup CUDA
-        if: matrix.variant == 'cuda'
-        uses: Jimver/cuda-toolkit@v0.2.16
-        with:
-          cuda: '12.4.0'
-          method: 'network'
-          sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "visual_studio_integration"]'
-
-      # Copy CUDA DLLs for bundling (only for cuda variant)
-      - name: Copy CUDA DLLs
-        if: matrix.variant == 'cuda'
-        shell: pwsh
-        run: |
-          $cudaPath = $env:CUDA_PATH
-          Write-Host "CUDA_PATH: $cudaPath"
-
-          # Create resources directory
-          $resourcesDir = "src-tauri/resources"
-          New-Item -ItemType Directory -Force -Path $resourcesDir
-
-          # Copy CUDA runtime DLLs
-          $dllsToCopy = @(
-            "cudart64_12.dll",
-            "cublas64_12.dll",
-            "cublasLt64_12.dll"
-          )
-
-          foreach ($dll in $dllsToCopy) {
-            $sourcePath = Join-Path $cudaPath "bin" $dll
-            if (Test-Path $sourcePath) {
-              Copy-Item $sourcePath $resourcesDir -Force
-              Write-Host "Copied $dll"
-            } else {
-              Write-Host "Warning: $dll not found at $sourcePath"
-              # Try alternative names for different CUDA versions
-              $altDll = $dll -replace "64_12", "64_*"
-              $found = Get-ChildItem -Path (Join-Path $cudaPath "bin") -Filter $altDll -ErrorAction SilentlyContinue | Select-Object -First 1
-              if ($found) {
-                Copy-Item $found.FullName $resourcesDir -Force
-                Write-Host "Copied alternative: $($found.Name)"
-              }
-            }
-          }
-
-          # List copied DLLs
-          Write-Host "Resources directory contents:"
-          Get-ChildItem $resourcesDir
-
-          # Update tauri.conf.json to include CUDA DLLs
-          $tauriConf = Get-Content "src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json
-          $tauriConf.bundle.resources = @{ "resources/*.dll" = "./" }
-          $tauriConf | ConvertTo-Json -Depth 20 | Set-Content "src-tauri/tauri.conf.json" -Encoding UTF8
-          Write-Host "Updated tauri.conf.json to include CUDA DLLs"
-
-      # Vulkan SDK setup (only for vulkan variant)
+      # Vulkan SDK setup
       - name: Setup Vulkan SDK
-        if: matrix.variant == 'vulkan'
         uses: jakoch/install-vulkan-sdk-action@v1.0.4
         with:
           vulkan_version: 1.3.290.0
@@ -246,7 +174,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm tauri build ${{ matrix.features }}
+        run: pnpm tauri build
 
       - name: Verify build artifacts
         shell: pwsh
@@ -273,23 +201,22 @@ jobs:
           }
           Write-Host "All required artifacts present"
 
-      # Rename artifacts to include variant
+      # Rename artifacts
       - name: Rename artifacts
         shell: pwsh
         run: |
           $version = "${{ needs.create-release.outputs.version }}"
-          $variant = "${{ matrix.variant }}"
           $releaseDir = "src-tauri/target/release/bundle/nsis"
 
           Write-Host "Looking for NSIS installer in: $releaseDir"
           Write-Host "All files in directory:"
           Get-ChildItem -Path $releaseDir -Recurse | ForEach-Object { Write-Host "  $($_.FullName)" }
 
-          # Find NSIS installer (exclude already renamed files)
-          $nsisFile = Get-ChildItem -Path $releaseDir -Filter "*.exe" | Where-Object { $_.Name -notmatch "-cpu-|-vulkan-|-cuda-" } | Select-Object -First 1
+          # Find NSIS installer
+          $nsisFile = Get-ChildItem -Path $releaseDir -Filter "*.exe" | Select-Object -First 1
 
           if ($nsisFile) {
-            $newName = "GigaWhisper_${version}_x64-${variant}-setup.exe"
+            $newName = "GigaWhisper_${version}_x64-setup.exe"
             $newPath = Join-Path $releaseDir $newName
             Write-Host "Found: $($nsisFile.Name)"
             Write-Host "Renaming to: $newName"
@@ -297,15 +224,13 @@ jobs:
             Write-Host "Renamed successfully"
           } else {
             Write-Host "ERROR: No NSIS installer found!"
-            Write-Host "Available .exe files:"
-            Get-ChildItem -Path $releaseDir -Filter "*.exe" | ForEach-Object { Write-Host "  $($_.Name)" }
             exit 1
           }
 
-          # Find the .nsis.zip updater bundle and its signature (Tauri v2 generates .nsis.zip.sig, not .exe.sig)
-          $nsisZip = Get-ChildItem -Path $releaseDir -Filter "*.nsis.zip" | Where-Object { $_.Name -notmatch "-cpu-|-vulkan-|-cuda-" } | Select-Object -First 1
+          # Find the .nsis.zip updater bundle and its signature
+          $nsisZip = Get-ChildItem -Path $releaseDir -Filter "*.nsis.zip" | Select-Object -First 1
           if ($nsisZip) {
-            $newZipName = "GigaWhisper_${version}_x64-${variant}-setup.nsis.zip"
+            $newZipName = "GigaWhisper_${version}_x64-setup.nsis.zip"
             $newZipPath = Join-Path $releaseDir $newZipName
             Move-Item $nsisZip.FullName $newZipPath -Force
             Write-Host "Renamed updater bundle: $newZipName"
@@ -321,20 +246,19 @@ jobs:
             Write-Host "WARNING: No .nsis.zip updater bundle found"
           }
 
-      # Upload renamed artifacts to release
+      # Upload artifacts to release
       - name: Upload artifacts to release
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = "${{ needs.create-release.outputs.version }}"
-          $variant = "${{ matrix.variant }}"
           $releaseDir = "src-tauri/target/release/bundle/nsis"
 
-          Write-Host "Uploading artifacts for variant: $variant"
+          Write-Host "Uploading artifacts..."
 
           # Upload NSIS installer
-          $exeFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.exe"
+          $exeFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-setup.exe"
           Write-Host "Looking for: $exeFile"
 
           if (Test-Path $exeFile) {
@@ -349,7 +273,7 @@ jobs:
           }
 
           # Upload updater bundle (.nsis.zip) for auto-update
-          $nsisZipFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.nsis.zip"
+          $nsisZipFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-setup.nsis.zip"
           if (Test-Path $nsisZipFile) {
             gh release upload "v${version}" $nsisZipFile --clobber
             Write-Host "Uploaded updater bundle: $nsisZipFile"
@@ -357,16 +281,15 @@ jobs:
             Write-Host "Warning: Updater bundle not found: $nsisZipFile"
           }
 
-      # Generate latest-{variant}.json
+      # Generate latest.json (single manifest)
       - name: Generate update manifest
         shell: pwsh
         run: |
           $version = "${{ needs.create-release.outputs.version }}"
-          $variant = "${{ matrix.variant }}"
           $releaseDir = "src-tauri/target/release/bundle/nsis"
 
-          # Read signature from .nsis.zip.sig (Tauri v2 signs the .nsis.zip updater bundle, not the .exe)
-          $sigFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-${variant}-setup.nsis.zip.sig"
+          # Read signature from .nsis.zip.sig
+          $sigFile = Join-Path $releaseDir "GigaWhisper_${version}_x64-setup.nsis.zip.sig"
           $signature = ""
           if (Test-Path $sigFile) {
             $signature = Get-Content $sigFile -Raw
@@ -380,21 +303,21 @@ jobs:
             exit 1
           }
 
-          # Create latest-{variant}.json (URL points to .nsis.zip updater bundle, not .exe)
+          # Create latest.json (single manifest for all installs)
           $manifest = @{
             version = $version
-            notes = "GigaWhisper v${version} (${variant})"
+            notes = "GigaWhisper v${version}"
             pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             platforms = @{
               "windows-x86_64" = @{
                 signature = $signature
-                url = "https://github.com/${{ github.repository }}/releases/download/v${version}/GigaWhisper_${version}_x64-${variant}-setup.nsis.zip"
+                url = "https://github.com/${{ github.repository }}/releases/download/v${version}/GigaWhisper_${version}_x64-setup.nsis.zip"
               }
             }
           }
 
           $manifestJson = $manifest | ConvertTo-Json -Depth 10
-          $manifestFile = "latest-${variant}.json"
+          $manifestFile = "latest.json"
           [System.IO.File]::WriteAllText($manifestFile, $manifestJson, [System.Text.UTF8Encoding]::new($false))
           Write-Host "Generated $manifestFile"
           Get-Content $manifestFile
@@ -403,7 +326,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "v${{ needs.create-release.outputs.version }}" "latest-${{ matrix.variant }}.json" --clobber
+          gh release upload "v${{ needs.create-release.outputs.version }}" "latest.json" --clobber
 
   # ============================================
   # Publish Release

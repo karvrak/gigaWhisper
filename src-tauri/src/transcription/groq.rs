@@ -118,7 +118,7 @@ impl TranscriptionProvider for GroqProvider {
 
         // Encode audio as WAV (done once, reused across retries)
         let wav_data = encode_wav(audio, 16000, 1);
-
+        let wav_bytes = bytes::Bytes::from(wav_data);
         let mut last_error: Option<TranscriptionError> = None;
 
         // Retry loop with exponential backoff
@@ -135,7 +135,7 @@ impl TranscriptionProvider for GroqProvider {
             }
 
             // Build multipart form (must be rebuilt for each attempt)
-            let file_part = match reqwest::multipart::Part::bytes(wav_data.clone())
+            let file_part = match reqwest::multipart::Part::stream(wav_bytes.clone())
                 .file_name("audio.wav")
                 .mime_str("audio/wav")
             {
@@ -151,6 +151,13 @@ impl TranscriptionProvider for GroqProvider {
             // Add language if specified
             if config.language != "auto" {
                 form = form.text("language", config.language.clone());
+            }
+
+            // Add custom vocabulary prompt if specified
+            if let Some(ref prompt) = config.prompt {
+                if !prompt.is_empty() {
+                    form = form.text("prompt", prompt.clone());
+                }
             }
 
             // Make API request

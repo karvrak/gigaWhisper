@@ -1,7 +1,8 @@
 //! Whisper.cpp Provider
 //!
 //! Local transcription using whisper-rs bindings.
-//! Supports GPU acceleration via Vulkan (AMD/Intel/NVIDIA) or CUDA (NVIDIA).
+//! GPU acceleration via Vulkan (AMD/Intel/NVIDIA) is always compiled in.
+//! CPU fallback is available at runtime via the gpu_enabled setting.
 //! Includes automatic CPU thread optimization.
 
 use super::{TranscriptionConfig, TranscriptionError, TranscriptionProvider, TranscriptionResult};
@@ -137,25 +138,16 @@ impl WhisperProvider {
         self.configured_threads == 0
     }
 
-    /// Check if GPU acceleration is available in this build
+    /// Check if GPU acceleration is available in this build.
+    /// With the single-installer approach, Vulkan is always compiled in.
     pub fn is_gpu_available() -> bool {
-        cfg!(any(feature = "gpu-vulkan", feature = "gpu-cuda"))
+        true
     }
 
-    /// Get the GPU backend name if available
+    /// Get the GPU backend name.
+    /// With the single-installer approach, this is always Vulkan.
     pub fn gpu_backend_name() -> &'static str {
-        #[cfg(feature = "gpu-cuda")]
-        {
-            "CUDA"
-        }
-        #[cfg(all(feature = "gpu-vulkan", not(feature = "gpu-cuda")))]
-        {
-            "Vulkan"
-        }
-        #[cfg(not(any(feature = "gpu-vulkan", feature = "gpu-cuda")))]
-        {
-            "None"
-        }
+        "Vulkan"
     }
 
     /// Load the model into memory
@@ -180,8 +172,7 @@ impl WhisperProvider {
             tracing::info!("GPU acceleration enabled: {}", Self::gpu_backend_name());
         } else if self.gpu_enabled {
             tracing::warn!(
-                "GPU requested but not available in this build. \
-                Compile with --features gpu-vulkan (AMD/Intel) or --features gpu-cuda (NVIDIA)"
+                "GPU requested but not available in this build (unexpected)"
             );
         }
 
@@ -259,6 +250,13 @@ impl WhisperProvider {
         }
 
         params.set_translate(config.translate);
+
+        // Set initial prompt for custom vocabulary
+        if let Some(ref prompt) = config.prompt {
+            if !prompt.is_empty() {
+                params.set_initial_prompt(prompt);
+            }
+        }
 
         // Run inference
         state
@@ -533,26 +531,17 @@ mod tests {
     }
 
     #[test]
-    fn test_gpu_backend_name_returns_valid_string() {
+    fn test_gpu_backend_name_returns_vulkan() {
         let name = WhisperProvider::gpu_backend_name();
-        // Should be one of the known values
-        assert!(
-            name == "CUDA" || name == "Vulkan" || name == "None",
-            "Unexpected GPU backend name: {}",
-            name
-        );
+        // Single-installer always uses Vulkan
+        assert_eq!(name, "Vulkan");
     }
 
     #[test]
-    fn test_gpu_backend_name_consistency_with_is_gpu_available() {
-        let available = WhisperProvider::is_gpu_available();
-        let name = WhisperProvider::gpu_backend_name();
-
-        if available {
-            assert!(name == "CUDA" || name == "Vulkan");
-        } else {
-            assert_eq!(name, "None");
-        }
+    fn test_gpu_is_always_available() {
+        // Single-installer always has Vulkan compiled in
+        assert!(WhisperProvider::is_gpu_available());
+        assert_eq!(WhisperProvider::gpu_backend_name(), "Vulkan");
     }
 
     // =========================================================================

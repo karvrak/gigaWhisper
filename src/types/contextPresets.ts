@@ -13,6 +13,8 @@ export interface ContextPreset {
     llm_provider: 'open-ai' | 'anthropic' | 'groq-llm';
     system_prompt: string;
   };
+  appPatterns?: string[];
+  customVocabulary?: string;
 }
 
 export const CONTEXT_PRESETS: ContextPreset[] = [
@@ -32,6 +34,7 @@ export const CONTEXT_PRESETS: ContextPreset[] = [
         'Structure with proper greeting, body paragraphs, and sign-off. ' +
         'Keep the original intent and tone. Output only the formatted email text.',
     },
+    appPatterns: ['outlook', 'thunderbird', 'gmail'],
   },
   {
     key: 'developer',
@@ -50,6 +53,8 @@ export const CONTEXT_PRESETS: ContextPreset[] = [
         'and structure as clear, concise technical writing. ' +
         'Suitable for commit messages, code comments, or documentation. Output only the cleaned text.',
     },
+    appPatterns: ['code', 'terminal', 'cmd', 'powershell', 'wt', 'windowsterminal'],
+    customVocabulary: 'GitHub, TypeScript, JavaScript, API, REST, GraphQL, Docker, Kubernetes',
   },
   {
     key: 'writing',
@@ -85,6 +90,7 @@ export const CONTEXT_PRESETS: ContextPreset[] = [
         'If it sounds like meeting notes, use bullet points. ' +
         'Remove filler words and hesitations. Output only the formatted text.',
     },
+    appPatterns: ['teams', 'zoom', 'slack', 'discord'],
   },
   {
     key: 'casual',
@@ -102,5 +108,6 @@ export const CONTEXT_PRESETS: ContextPreset[] = [
         'Fix obvious errors but preserve the natural conversational style. ' +
         'Remove filler words. Output only the cleaned text.',
     },
+    appPatterns: ['whatsapp', 'telegram', 'messenger', 'signal'],
   },
 ];

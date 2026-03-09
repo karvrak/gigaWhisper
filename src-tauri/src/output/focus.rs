@@ -150,6 +150,111 @@ pub fn has_text_focus() -> bool {
     should_auto_paste()
 }
 
+/// Represents a running application with a visible window
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RunningApp {
+    /// Process name without extension (e.g., "Code" for Code.exe)
+    pub process_name: String,
+    /// Window title of the main window
+    pub window_title: String,
+}
+
+/// List all visible windows with their process names
+#[cfg(windows)]
+pub fn list_running_apps() -> Vec<RunningApp> {
+    use std::collections::HashSet;
+    use windows::Win32::Foundation::*;
+    use windows::Win32::UI::WindowsAndMessaging::*;
+
+    let mut apps: Vec<RunningApp> = Vec::new();
+    let mut seen_processes: HashSet<String> = HashSet::new();
+
+    // SAFETY: EnumWindows calls the callback for each top-level window.
+    // The callback receives a valid HWND and our Vec pointer.
+    // We only read window properties and never store the HWND beyond the callback.
+    unsafe {
+        let _ = EnumWindows(
+            Some(enum_window_callback),
+            LPARAM(&mut apps as *mut Vec<RunningApp> as isize),
+        );
+    }
+
+    // Deduplicate by process_name (lowercase), keep first occurrence
+    let mut result: Vec<RunningApp> = Vec::new();
+    for app in apps {
+        let key = app.process_name.to_lowercase();
+        if seen_processes.insert(key) {
+            result.push(app);
+        }
+    }
+
+    // Sort alphabetically by process name
+    result.sort_by(|a, b| {
+        a.process_name
+            .to_lowercase()
+            .cmp(&b.process_name.to_lowercase())
+    });
+    result
+}
+
+#[cfg(windows)]
+unsafe extern "system" fn enum_window_callback(
+    hwnd: windows::Win32::Foundation::HWND,
+    lparam: windows::Win32::Foundation::LPARAM,
+) -> windows::Win32::Foundation::BOOL {
+    use windows::Win32::Foundation::BOOL;
+    use windows::Win32::UI::WindowsAndMessaging::*;
+
+    // Skip invisible windows
+    if !IsWindowVisible(hwnd).as_bool() {
+        return BOOL(1); // continue enumeration
+    }
+
+    // Get window title
+    let mut title_buf = [0u16; 256];
+    let title_len = GetWindowTextW(hwnd, &mut title_buf);
+    if title_len == 0 {
+        return BOOL(1); // skip windows without title
+    }
+    let title = String::from_utf16_lossy(&title_buf[..title_len as usize]);
+
+    // Skip tiny/utility windows (likely tooltips, etc.)
+    if title.is_empty() {
+        return BOOL(1);
+    }
+
+    // Get process name
+    let mut pid = 0u32;
+    GetWindowThreadProcessId(hwnd, Some(&mut pid));
+
+    if let Some(process_name) = get_process_name(pid) {
+        // Skip our own app
+        if process_name.to_lowercase().contains("gigawhisper") {
+            return BOOL(1);
+        }
+
+        // Remove .exe extension
+        let name = process_name
+            .strip_suffix(".exe")
+            .or_else(|| process_name.strip_suffix(".EXE"))
+            .unwrap_or(&process_name)
+            .to_string();
+
+        let apps = &mut *(lparam.0 as *mut Vec<RunningApp>);
+        apps.push(RunningApp {
+            process_name: name,
+            window_title: title,
+        });
+    }
+
+    BOOL(1) // continue enumeration
+}
+
+#[cfg(not(windows))]
+pub fn list_running_apps() -> Vec<RunningApp> {
+    Vec::new()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

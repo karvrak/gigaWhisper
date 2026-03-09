@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Current schema version for migration support
 /// Increment this when making breaking changes to the settings structure
-pub const CURRENT_SCHEMA_VERSION: u32 = 2;
+pub const CURRENT_SCHEMA_VERSION: u32 = 3;
 
 /// Default schema version for new or migrated configs
 fn default_schema_version() -> u32 {
@@ -312,30 +312,40 @@ pub enum TranscriptionProvider {
 }
 
 /// GPU backend selection for whisper acceleration
+///
+/// With the single-installer approach, Vulkan is always compiled in.
+/// CPU fallback is controlled by the `gpu_enabled` toggle, not by this enum.
+/// The `Cuda` variant is kept for backwards compatibility with existing config files
+/// but is treated as unavailable and will fall back to Vulkan.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum GpuBackend {
     /// CPU only (no GPU acceleration)
     Cpu,
-    /// Vulkan backend (AMD, Intel, NVIDIA - cross-platform)
+    /// Vulkan backend (AMD, Intel, NVIDIA - always available)
     Vulkan,
-    /// CUDA backend (NVIDIA only - best performance)
+    /// CUDA backend (deprecated - kept for config compatibility, treated as Vulkan)
     Cuda,
 }
 
 impl GpuBackend {
-    /// Check if this backend is available in the current build
+    /// Check if this backend is available in the current build.
+    /// Vulkan is always available. CUDA is no longer supported and returns false.
     pub fn is_available(&self) -> bool {
         match self {
             GpuBackend::Cpu => true,
-            #[cfg(feature = "gpu-vulkan")]
             GpuBackend::Vulkan => true,
-            #[cfg(not(feature = "gpu-vulkan"))]
-            GpuBackend::Vulkan => false,
-            #[cfg(feature = "gpu-cuda")]
-            GpuBackend::Cuda => true,
-            #[cfg(not(feature = "gpu-cuda"))]
+            // CUDA is no longer supported in single-installer builds
             GpuBackend::Cuda => false,
+        }
+    }
+
+    /// Get the effective backend to use.
+    /// CUDA configs are migrated to Vulkan at runtime.
+    pub fn effective(&self) -> &GpuBackend {
+        match self {
+            GpuBackend::Cuda => &GpuBackend::Vulkan,
+            other => other,
         }
     }
 
@@ -344,7 +354,7 @@ impl GpuBackend {
         match self {
             GpuBackend::Cpu => "CPU",
             GpuBackend::Vulkan => "Vulkan (AMD/Intel/NVIDIA)",
-            GpuBackend::Cuda => "CUDA (NVIDIA)",
+            GpuBackend::Cuda => "CUDA (deprecated, using Vulkan)",
         }
     }
 }
@@ -371,8 +381,8 @@ impl Default for LocalTranscriptionSettings {
             model: WhisperModel::Small,
             quantization: ModelQuantization::F16,
             threads: 0, // Auto-detect
-            gpu_enabled: false,
-            gpu_backend: GpuBackend::Cpu,
+            gpu_enabled: true,
+            gpu_backend: GpuBackend::Vulkan,
         }
     }
 }
@@ -847,6 +857,12 @@ pub struct TranscriptionContext {
     pub color: Option<String>,
     /// Icon emoji
     pub icon: Option<String>,
+    /// Custom vocabulary words (comma-separated) used as Whisper prompt
+    #[serde(default)]
+    pub custom_vocabulary: Option<String>,
+    /// App patterns for auto-switching (process names, case-insensitive)
+    #[serde(default)]
+    pub app_patterns: Vec<String>,
 }
 
 impl Default for TranscriptionContext {
@@ -861,6 +877,8 @@ impl Default for TranscriptionContext {
             post_processing: None,
             color: None,
             icon: None,
+            custom_vocabulary: None,
+            app_patterns: Vec::new(),
         }
     }
 }
@@ -892,6 +910,9 @@ pub struct PostProcessingSettings {
     pub anthropic: AnthropicLlmSettings,
     /// Groq LLM settings
     pub groq_llm: GroqLlmSettings,
+    /// Automatically remove filler words (um, uh, etc.)
+    #[serde(default)]
+    pub remove_filler_words: bool,
 }
 
 impl Default for PostProcessingSettings {
@@ -903,6 +924,7 @@ impl Default for PostProcessingSettings {
             openai: OpenAiLlmSettings::default(),
             anthropic: AnthropicLlmSettings::default(),
             groq_llm: GroqLlmSettings::default(),
+            remove_filler_words: false,
         }
     }
 }

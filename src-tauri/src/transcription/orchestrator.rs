@@ -490,6 +490,7 @@ mod tests {
         let config = TranscriptionConfig {
             language: "fr".to_string(),
             translate: false,
+            prompt: None,
         };
 
         let result = orchestrator.transcribe(&[0.0; 100], &config).await;
@@ -503,6 +504,7 @@ mod tests {
         let config = TranscriptionConfig {
             language: "auto".to_string(),
             translate: true,
+            prompt: None,
         };
 
         let result = orchestrator.transcribe(&[0.0; 100], &config).await;

@@ -76,6 +76,7 @@ impl super::TranscriptionProvider for OpenAiProvider {
 
         let start = Instant::now();
         let wav_data = encode_wav(audio, 16000, 1);
+        let wav_bytes = bytes::Bytes::from(wav_data);
         let mut last_error: Option<TranscriptionError> = None;
 
         for attempt in 0..=self.max_retries {
@@ -89,7 +90,7 @@ impl super::TranscriptionProvider for OpenAiProvider {
                 tokio::time::sleep(delay).await;
             }
 
-            let file_part = match reqwest::multipart::Part::bytes(wav_data.clone())
+            let file_part = match reqwest::multipart::Part::stream(wav_bytes.clone())
                 .file_name("audio.wav")
                 .mime_str("audio/wav")
             {
@@ -104,6 +105,12 @@ impl super::TranscriptionProvider for OpenAiProvider {
 
             if config.language != "auto" {
                 form = form.text("language", config.language.clone());
+            }
+
+            if let Some(ref prompt) = config.prompt {
+                if !prompt.is_empty() {
+                    form = form.text("prompt", prompt.clone());
+                }
             }
 
             let response = match self

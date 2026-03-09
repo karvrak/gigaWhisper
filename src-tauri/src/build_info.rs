@@ -1,24 +1,11 @@
 //! Build information module
 //!
-//! Contains compile-time constants about the build variant.
+//! Single-build configuration with Vulkan GPU support compiled in.
+//! CPU fallback is always available at runtime via the gpu_enabled setting.
 
-/// The GPU variant this build was compiled with.
-/// Used to determine which update endpoint to use.
-#[cfg(feature = "gpu-cuda")]
-pub const BUILD_VARIANT: &str = "cuda";
-
-#[cfg(feature = "gpu-vulkan")]
+/// Build identifier used for update manifests.
+/// With the single-installer approach, there is only one build variant.
 pub const BUILD_VARIANT: &str = "vulkan";
 
-#[cfg(not(any(feature = "gpu-cuda", feature = "gpu-vulkan")))]
-pub const BUILD_VARIANT: &str = "cpu";
-
-/// Human-readable name for the build variant
-#[cfg(feature = "gpu-cuda")]
-pub const BUILD_VARIANT_DISPLAY: &str = "CUDA (NVIDIA GPU)";
-
-#[cfg(feature = "gpu-vulkan")]
+/// Human-readable name for the build
 pub const BUILD_VARIANT_DISPLAY: &str = "Vulkan (GPU)";
-
-#[cfg(not(any(feature = "gpu-cuda", feature = "gpu-vulkan")))]
-pub const BUILD_VARIANT_DISPLAY: &str = "CPU";

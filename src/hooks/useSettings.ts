@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 // Settings types matching Rust structs
@@ -86,12 +86,15 @@ interface Settings {
       } | null;
       color: string | null;
       icon: string | null;
+      custom_vocabulary: string | null;
+      app_patterns: string[];
     }>;
   };
   post_processing: {
     enabled: boolean;
     default_provider: 'open-ai' | 'anthropic' | 'groq-llm';
     default_prompt: string;
+    remove_filler_words: boolean;
     openai: {
       api_key_configured: boolean;
       model: string;
@@ -129,19 +132,32 @@ export function useSettings() {
     loadSettings();
   }, []);
 
-  // Save settings with debounce
-  const updateSettings = useCallback(async (newSettings: Settings) => {
-    setSettings(newSettings);
-    setSaving(true);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
 
-    try {
-      await invoke('save_settings', { settings: newSettings });
-      setError(null);
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setSaving(false);
-    }
+  // Save settings with debounce
+  const updateSettings = useCallback((newSettings: Settings) => {
+    setSettings(newSettings);
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+    debounceTimer.current = setTimeout(async () => {
+      setSaving(true);
+      try {
+        await invoke('save_settings', { settings: newSettings });
+        setError(null);
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setSaving(false);
+      }
+    }, 300);
+  }, []);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
   }, []);
 
   // Reset to defaults

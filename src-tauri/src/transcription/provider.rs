@@ -11,6 +11,8 @@ pub struct TranscriptionConfig {
     pub language: String,
     /// Translate to English
     pub translate: bool,
+    /// Initial prompt for Whisper (custom vocabulary, context hints)
+    pub prompt: Option<String>,
 }
 
 impl Default for TranscriptionConfig {
@@ -18,6 +20,7 @@ impl Default for TranscriptionConfig {
         Self {
             language: "auto".to_string(),
             translate: false,
+            prompt: None,
         }
     }
 }
@@ -135,6 +138,7 @@ mod tests {
         let config = TranscriptionConfig {
             language: "fr".to_string(),
             translate: true,
+            prompt: None,
         };
         assert_eq!(config.language, "fr");
         assert!(config.translate);

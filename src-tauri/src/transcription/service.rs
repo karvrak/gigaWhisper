@@ -57,6 +57,8 @@ pub struct TranscriptionService {
     cached_whisper: RwLock<Option<CachedWhisper>>,
     /// Transcription status
     status: RwLock<TranscriptionStatus>,
+    /// Shared HTTP client for LLM providers
+    http_client: reqwest::Client,
 }
 
 impl TranscriptionService {
@@ -65,6 +67,7 @@ impl TranscriptionService {
         Self {
             cached_whisper: RwLock::new(None),
             status: RwLock::new(TranscriptionStatus::default()),
+            http_client: reqwest::Client::new(),
         }
     }
 
@@ -179,9 +182,21 @@ impl TranscriptionService {
         // Validate API key is available for the selected provider
         self.validate_provider_configured(&config.transcription.provider)?;
 
+        // Build custom vocabulary prompt from active context
+        let prompt = {
+            let active_id = &config.contexts.active_context;
+            config
+                .contexts
+                .contexts
+                .iter()
+                .find(|c| c.id == *active_id)
+                .and_then(|c| c.custom_vocabulary.clone())
+        };
+
         let transcription_config = TranscriptionConfig {
             language: config.transcription.language.clone(),
             translate: false,
+            prompt,
         };
 
         let result = match config.transcription.provider {
@@ -289,7 +304,32 @@ impl TranscriptionService {
         // Get config and apply active context overrides
         let config = {
             let mut cfg = state.config.read().clone();
-            let active_id = cfg.contexts.active_context.clone();
+            let mut active_id = cfg.contexts.active_context.clone();
+
+            // Feature: Per-app context auto-switching
+            // Check if the active window matches any context's app_patterns
+            if let Some(window) = output::get_active_window() {
+                let process_lower = window.process_name.to_lowercase();
+                let title_lower = window.title.to_lowercase();
+                for ctx in &cfg.contexts.contexts {
+                    if ctx.id != "default" && !ctx.app_patterns.is_empty() {
+                        let matches = ctx.app_patterns.iter().any(|pattern| {
+                            let p = pattern.to_lowercase();
+                            process_lower.contains(&p) || title_lower.contains(&p)
+                        });
+                        if matches {
+                            tracing::info!(
+                                "Auto-switched to context '{}' (matched app: {})",
+                                ctx.name,
+                                window.process_name
+                            );
+                            active_id = ctx.id.clone();
+                            break;
+                        }
+                    }
+                }
+            }
+
             if let Some(ctx) = cfg
                 .contexts
                 .contexts
@@ -317,6 +357,9 @@ impl TranscriptionService {
             }
             cfg
         };
+
+        // Save length before potential move into samples_for_transcription
+        let original_sample_count = samples.len();
 
         // Apply Voice Activity Detection if enabled
         let samples_for_transcription = if config.audio.vad.enabled {
@@ -355,15 +398,15 @@ impl TranscriptionService {
                 }
                 Err(e) => {
                     tracing::warn!("VAD failed, using full audio: {}", e);
-                    samples.clone()
+                    samples
                 }
             }
         } else {
-            samples.clone()
+            samples
         };
 
         // Calculate audio durations for metrics
-        let original_audio_ms = (samples.len() as u64 * 1000) / WHISPER_SAMPLE_RATE as u64;
+        let original_audio_ms = (original_sample_count as u64 * 1000) / WHISPER_SAMPLE_RATE as u64;
         let filtered_audio_ms =
             (samples_for_transcription.len() as u64 * 1000) / WHISPER_SAMPLE_RATE as u64;
         let vad_was_enabled = config.audio.vad.enabled;
@@ -419,7 +462,7 @@ impl TranscriptionService {
                         transcription.duration_ms,
                         transcription.provider.clone(),
                         transcription.language.clone(),
-                        &samples,
+                        &samples_for_transcription,
                         WHISPER_SAMPLE_RATE,
                     );
                     let _ = app.emit("history:updated", ());
@@ -470,23 +513,34 @@ impl TranscriptionService {
     async fn apply_post_processing(&self, text: &str, config: &Settings) -> Result<String, String> {
         use crate::config::LlmProviderType;
 
-        let prompt = &config.post_processing.default_prompt;
+        let mut system_prompt = config.post_processing.default_prompt.clone();
+
+        // Feature: Auto-remove filler words
+        if config.post_processing.remove_filler_words {
+            system_prompt.push_str(
+                " Also remove all filler words and verbal tics (um, uh, hmm, err, like, you know, I mean, basically, actually, sort of, kind of, right, so, well)."
+            );
+        }
+
         let request = LlmRequest {
-            system_prompt: prompt.clone(),
+            system_prompt,
             user_message: text.to_string(),
             max_tokens: 2048,
         };
 
         let llm_provider: Box<dyn LlmProvider> = match config.post_processing.default_provider {
-            LlmProviderType::OpenAi => Box::new(crate::llm::OpenAiLlm::new(Some(
-                config.post_processing.openai.model.clone(),
-            ))),
-            LlmProviderType::Anthropic => Box::new(crate::llm::AnthropicLlm::new(Some(
-                config.post_processing.anthropic.model.clone(),
-            ))),
-            LlmProviderType::GroqLlm => Box::new(crate::llm::GroqLlm::new(Some(
-                config.post_processing.groq_llm.model.clone(),
-            ))),
+            LlmProviderType::OpenAi => Box::new(crate::llm::OpenAiLlm::with_client(
+                Some(config.post_processing.openai.model.clone()),
+                self.http_client.clone(),
+            )),
+            LlmProviderType::Anthropic => Box::new(crate::llm::AnthropicLlm::with_client(
+                Some(config.post_processing.anthropic.model.clone()),
+                self.http_client.clone(),
+            )),
+            LlmProviderType::GroqLlm => Box::new(crate::llm::GroqLlm::with_client(
+                Some(config.post_processing.groq_llm.model.clone()),
+                self.http_client.clone(),
+            )),
         };
 
         let response = llm_provider

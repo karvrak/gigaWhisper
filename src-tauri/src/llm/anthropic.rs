@@ -19,6 +19,13 @@ impl AnthropicLlm {
         }
     }
 
+    pub fn with_client(model: Option<String>, client: reqwest::Client) -> Self {
+        Self {
+            model: model.unwrap_or_else(|| "claude-haiku-4-5-20251001".to_string()),
+            client,
+        }
+    }
+
     fn get_api_key(&self) -> Option<String> {
         SecretsManager::get_secret("anthropic_api_key").ok()
     }

@@ -166,6 +166,46 @@ impl Migration for MigrationV1ToV2 {
     }
 }
 
+/// Migration from schema v2 to v3: Add custom vocabulary, app patterns, filler word removal
+struct MigrationV2ToV3;
+
+impl Migration for MigrationV2ToV3 {
+    fn source_version(&self) -> u32 {
+        2
+    }
+
+    fn to_version(&self) -> u32 {
+        3
+    }
+
+    fn description(&self) -> &'static str {
+        "Add custom vocabulary, per-app context auto-switching, and filler word removal"
+    }
+
+    fn migrate(&self, config: &mut toml::Value) -> Result<(), MigrationError> {
+        let table = config.as_table_mut().ok_or(MigrationError::InvalidConfig)?;
+
+        // Add remove_filler_words to post_processing if missing
+        if let Some(toml::Value::Table(pp)) = table.get_mut("post_processing") {
+            if !pp.contains_key("remove_filler_words") {
+                pp.insert(
+                    "remove_filler_words".to_string(),
+                    toml::Value::Boolean(false),
+                );
+            }
+        }
+
+        // Add custom_vocabulary and app_patterns to each context
+        // These fields use #[serde(default)] so missing keys deserialize correctly.
+        // No explicit migration needed for Vec<String> and Option<String>.
+
+        tracing::info!(
+            "Migrated config from v2 to v3: added vocabulary, app patterns, filler word removal"
+        );
+        Ok(())
+    }
+}
+
 /// Migration registry that holds all migrations
 pub struct MigrationRegistry {
     migrations: Vec<Box<dyn Migration>>,
@@ -175,7 +215,7 @@ impl MigrationRegistry {
     /// Create a new registry with all known migrations
     pub fn new() -> Self {
         Self {
-            migrations: vec![Box::new(MigrationV1ToV2)],
+            migrations: vec![Box::new(MigrationV1ToV2), Box::new(MigrationV2ToV3)],
         }
     }
 
@@ -305,33 +345,14 @@ pub fn cleanup_old_backups(config_path: &Path, keep_count: usize) -> Result<(), 
     Ok(())
 }
 
-/// Generate a timestamp string without heavy dependencies
+/// Generate a timestamp string for backup filenames
 fn chrono_lite_timestamp() -> String {
-    use std::time::SystemTime;
-
-    let duration = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap_or_default();
-
-    let secs = duration.as_secs();
-
-    // Convert to rough date/time (not accurate for timezones, but sufficient for uniqueness)
-    let days = secs / 86400;
-    let years_since_1970 = days / 365;
-    let year = 1970 + years_since_1970;
-    let day_of_year = days % 365;
-    let month = (day_of_year / 30).min(11) + 1;
-    let day = (day_of_year % 30) + 1;
-
-    let time_of_day = secs % 86400;
-    let hours = time_of_day / 3600;
-    let minutes = (time_of_day % 3600) / 60;
-    let seconds = time_of_day % 60;
-
-    format!(
-        "{:04}{:02}{:02}_{:02}{:02}{:02}",
-        year, month, day, hours, minutes, seconds
-    )
+    use time::macros::format_description;
+    time::OffsetDateTime::now_utc()
+        .format(format_description!(
+            "[year][month][day]_[hour][minute][second]"
+        ))
+        .unwrap_or_else(|_| "unknown".to_string())
 }
 
 #[cfg(test)]

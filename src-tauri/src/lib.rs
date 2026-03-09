@@ -280,9 +280,9 @@ pub fn run() {
             commands::contexts::save_context,
             commands::contexts::delete_context,
             commands::contexts::set_active_context,
+            commands::apps::get_running_apps,
             updater::install_update,
             updater::restart_app,
-            updater::get_build_variant,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -19,6 +19,13 @@ impl GroqLlm {
         }
     }
 
+    pub fn with_client(model: Option<String>, client: reqwest::Client) -> Self {
+        Self {
+            model: model.unwrap_or_else(|| "llama-3.1-8b-instant".to_string()),
+            client,
+        }
+    }
+
     fn get_api_key(&self) -> Option<String> {
         // Reuse the Groq transcription API key
         SecretsManager::get_groq_api_key().ok()

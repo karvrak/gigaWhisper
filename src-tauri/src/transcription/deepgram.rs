@@ -79,6 +79,7 @@ impl super::TranscriptionProvider for DeepgramProvider {
 
         let start = Instant::now();
         let wav_data = encode_wav(audio, 16000, 1);
+        let wav_bytes = bytes::Bytes::from(wav_data);
         let mut last_error: Option<TranscriptionError> = None;
 
         for attempt in 0..=self.max_retries {
@@ -103,12 +104,25 @@ impl super::TranscriptionProvider for DeepgramProvider {
                 url.push_str("&detect_language=true");
             }
 
+            // Add keywords from custom vocabulary
+            if let Some(ref prompt) = config.prompt {
+                if !prompt.is_empty() {
+                    // Deepgram uses keywords parameter instead of prompt
+                    for keyword in prompt.split(',') {
+                        let kw = keyword.trim();
+                        if !kw.is_empty() {
+                            url.push_str(&format!("&keywords={}", kw.replace(' ', "%20")));
+                        }
+                    }
+                }
+            }
+
             let response = match self
                 .client
                 .post(&url)
                 .header("Authorization", format!("Token {}", api_key))
                 .header("Content-Type", "audio/wav")
-                .body(wav_data.clone())
+                .body(wav_bytes.clone())
                 .send()
                 .await
             {

@@ -1,6 +1,6 @@
 [package]
 name = "gigawhisper"
-version = "1.0.13"
+version = "1.0.14"
 description = "Open-source voice transcription app for Windows"
 authors = ["GigaWhisper Contributors"]
 edition = "2021"
@@ -65,8 +65,10 @@ arboard = "3"
 # Configuration
 directories = "5"
 toml = "0.8"
+time = { version = "0.3", features = ["formatting", "macros"] }
 
 # Utilities
+bytes = "1"
 once_cell = "1"
 parking_lot = "0.12"
 uuid = { version = "1", features = ["v4"] }
@@ -101,14 +103,13 @@ windows = { version = "0.58", features = [
 ] }
 
 [features]
-default = ["custom-protocol"]
+default = ["custom-protocol", "gpu-vulkan"]
 custom-protocol = ["tauri/custom-protocol"]
 
-# GPU acceleration features
-# Use: cargo build --features gpu-vulkan (for AMD/Intel/NVIDIA)
-# Use: cargo build --features gpu-cuda (for NVIDIA only, better performance)
+# GPU acceleration via Vulkan (enabled by default)
+# Vulkan supports AMD, Intel, and NVIDIA GPUs
+# CPU fallback remains available at runtime via the gpu_enabled toggle in settings
 gpu-vulkan = ["whisper-rs/vulkan"]
-gpu-cuda = ["whisper-rs/cuda"]
 
 [dev-dependencies]
 tempfile = "3"
