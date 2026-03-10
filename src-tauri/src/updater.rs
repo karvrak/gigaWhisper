@@ -20,10 +20,7 @@ fn get_update_endpoint() -> String {
 /// Check for updates and emit an event if one is available.
 /// If `auto_install` is true, the update is downloaded and installed automatically.
 pub async fn check_for_updates<R: Runtime>(app: AppHandle<R>, auto_install: bool) {
-    tracing::info!(
-        "Checking for updates (auto_install: {})...",
-        auto_install
-    );
+    tracing::info!("Checking for updates (auto_install: {})...", auto_install);
     tracing::debug!("Update endpoint: {}", get_update_endpoint());
 
     let endpoint = match get_update_endpoint().parse() {

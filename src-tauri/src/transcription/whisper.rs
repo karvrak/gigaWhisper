@@ -171,9 +171,7 @@ impl WhisperProvider {
             params.use_gpu(true);
             tracing::info!("GPU acceleration enabled: {}", Self::gpu_backend_name());
         } else if self.gpu_enabled {
-            tracing::warn!(
-                "GPU requested but not available in this build (unexpected)"
-            );
+            tracing::warn!("GPU requested but not available in this build (unexpected)");
         }
 
         let path_str = self.model_path.to_str().ok_or_else(|| {

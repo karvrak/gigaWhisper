@@ -18,6 +18,8 @@ pub enum PremiumFeature {
     OpenAiProvider,
     /// Deepgram cloud provider
     DeepgramProvider,
+    /// Custom endpoint provider (transcription + LLM)
+    CustomProvider,
 }
 
 impl PremiumFeature {
@@ -29,6 +31,7 @@ impl PremiumFeature {
             Self::LlmPostProcessing => "AI Post-Processing",
             Self::OpenAiProvider => "OpenAI Whisper",
             Self::DeepgramProvider => "Deepgram Nova",
+            Self::CustomProvider => "Custom Endpoint",
         }
     }
 
@@ -40,6 +43,7 @@ impl PremiumFeature {
             Self::LlmPostProcessing,
             Self::OpenAiProvider,
             Self::DeepgramProvider,
+            Self::CustomProvider,
         ]
     }
 }

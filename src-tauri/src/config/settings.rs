@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Current schema version for migration support
 /// Increment this when making breaking changes to the settings structure
-pub const CURRENT_SCHEMA_VERSION: u32 = 3;
+pub const CURRENT_SCHEMA_VERSION: u32 = 4;
 
 /// Default schema version for new or migrated configs
 fn default_schema_version() -> u32 {
@@ -71,6 +71,13 @@ impl Settings {
             TranscriptionProvider::Deepgram if !super::SecretsManager::has_deepgram_api_key() => {
                 return Err(SettingsError::MissingApiKey);
             }
+            TranscriptionProvider::Custom => {
+                if self.transcription.custom.api_url.trim().is_empty() {
+                    return Err(SettingsError::InvalidValue(
+                        "Custom transcription API URL cannot be empty".to_string(),
+                    ));
+                }
+            }
             _ => {}
         }
 
@@ -121,10 +128,14 @@ impl Settings {
         self.transcription.openai.api_key_configured = super::SecretsManager::has_openai_api_key();
         self.transcription.deepgram.api_key_configured =
             super::SecretsManager::has_deepgram_api_key();
+        self.transcription.custom.api_key_configured =
+            super::SecretsManager::has_custom_transcription_api_key();
         self.post_processing.openai.api_key_configured =
             super::SecretsManager::has_openai_api_key();
         self.post_processing.anthropic.api_key_configured =
             super::SecretsManager::has_anthropic_api_key();
+        self.post_processing.custom_llm.api_key_configured =
+            super::SecretsManager::has_custom_llm_api_key();
     }
 }
 
@@ -229,6 +240,8 @@ pub struct TranscriptionSettings {
     pub openai: OpenAiTranscriptionSettings,
     /// Deepgram API settings
     pub deepgram: DeepgramSettings,
+    /// Custom endpoint settings
+    pub custom: CustomTranscriptionSettings,
 }
 
 impl Default for TranscriptionSettings {
@@ -240,6 +253,7 @@ impl Default for TranscriptionSettings {
             groq: GroqSettings::default(),
             openai: OpenAiTranscriptionSettings::default(),
             deepgram: DeepgramSettings::default(),
+            custom: CustomTranscriptionSettings::default(),
         }
     }
 }
@@ -295,6 +309,18 @@ impl TranscriptionSettings {
                 Self::MAX_TIMEOUT
             )));
         }
+        if self.custom.timeout_seconds == 0 {
+            return Err(SettingsError::InvalidValue(
+                "custom timeout_seconds cannot be 0".to_string(),
+            ));
+        }
+        if self.custom.timeout_seconds > Self::MAX_TIMEOUT {
+            return Err(SettingsError::InvalidValue(format!(
+                "custom timeout_seconds {} exceeds limit of {} seconds",
+                self.custom.timeout_seconds,
+                Self::MAX_TIMEOUT
+            )));
+        }
         Ok(())
     }
 
@@ -313,6 +339,10 @@ impl TranscriptionSettings {
             self.deepgram.timeout_seconds = 30;
         }
         self.deepgram.timeout_seconds = self.deepgram.timeout_seconds.min(Self::MAX_TIMEOUT);
+        if self.custom.timeout_seconds == 0 {
+            self.custom.timeout_seconds = 30;
+        }
+        self.custom.timeout_seconds = self.custom.timeout_seconds.min(Self::MAX_TIMEOUT);
     }
 }
 
@@ -324,6 +354,81 @@ pub enum TranscriptionProvider {
     Groq,
     OpenAi,
     Deepgram,
+    Custom,
+}
+
+/// Authentication type for custom providers
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AuthType {
+    /// Authorization: Bearer <key>
+    Bearer,
+    /// x-api-key: <key>
+    XApiKey,
+    /// Custom header name
+    Custom,
+}
+
+impl Default for AuthType {
+    fn default() -> Self {
+        Self::Bearer
+    }
+}
+
+/// Custom transcription endpoint settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CustomTranscriptionSettings {
+    pub api_key_configured: bool,
+    pub api_url: String,
+    pub model: String,
+    pub timeout_seconds: u32,
+    pub auth_type: AuthType,
+    /// Used when auth_type == Custom
+    pub custom_header_name: String,
+    pub accept_invalid_certs: bool,
+}
+
+impl Default for CustomTranscriptionSettings {
+    fn default() -> Self {
+        Self {
+            api_key_configured: false,
+            api_url: String::new(),
+            model: "whisper-large-v3".to_string(),
+            timeout_seconds: 30,
+            auth_type: AuthType::Bearer,
+            custom_header_name: String::new(),
+            accept_invalid_certs: false,
+        }
+    }
+}
+
+/// Custom LLM endpoint settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CustomLlmSettings {
+    pub api_key_configured: bool,
+    pub api_url: String,
+    pub model: String,
+    pub timeout_seconds: u32,
+    pub auth_type: AuthType,
+    /// Used when auth_type == Custom
+    pub custom_header_name: String,
+    pub accept_invalid_certs: bool,
+}
+
+impl Default for CustomLlmSettings {
+    fn default() -> Self {
+        Self {
+            api_key_configured: false,
+            api_url: String::new(),
+            model: "gpt-4o-mini".to_string(),
+            timeout_seconds: 30,
+            auth_type: AuthType::Bearer,
+            custom_header_name: String::new(),
+            accept_invalid_certs: false,
+        }
+    }
 }
 
 /// GPU backend selection for whisper acceleration
@@ -925,6 +1030,8 @@ pub struct PostProcessingSettings {
     pub anthropic: AnthropicLlmSettings,
     /// Groq LLM settings
     pub groq_llm: GroqLlmSettings,
+    /// Custom LLM endpoint settings
+    pub custom_llm: CustomLlmSettings,
     /// Automatically remove filler words (um, uh, etc.)
     #[serde(default)]
     pub remove_filler_words: bool,
@@ -939,6 +1046,7 @@ impl Default for PostProcessingSettings {
             openai: OpenAiLlmSettings::default(),
             anthropic: AnthropicLlmSettings::default(),
             groq_llm: GroqLlmSettings::default(),
+            custom_llm: CustomLlmSettings::default(),
             remove_filler_words: false,
         }
     }
@@ -951,6 +1059,7 @@ pub enum LlmProviderType {
     OpenAi,
     Anthropic,
     GroqLlm,
+    CustomLlm,
 }
 
 /// OpenAI LLM settings

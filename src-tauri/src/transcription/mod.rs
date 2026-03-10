@@ -2,6 +2,7 @@
 //!
 //! Speech-to-text using local or cloud providers.
 
+mod custom;
 mod deepgram;
 mod groq;
 mod openai;
@@ -11,6 +12,7 @@ mod service;
 mod streaming;
 mod whisper;
 
+pub use custom::*;
 pub use deepgram::*;
 pub use groq::*;
 pub use openai::*;

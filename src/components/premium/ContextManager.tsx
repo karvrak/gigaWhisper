@@ -16,12 +16,14 @@ export function ContextManager() {
     groq: settings.transcription.groq.api_key_configured,
     openai: settings.transcription.openai.api_key_configured,
     deepgram: settings.transcription.deepgram.api_key_configured,
-  } : { groq: false, openai: false, deepgram: false };
+    custom: settings.transcription.custom.api_key_configured,
+  } : { groq: false, openai: false, deepgram: false, custom: false };
   const llmProviderAvailability = settings ? {
     groq_llm: settings.transcription.groq.api_key_configured,
     openai: settings.post_processing.openai.api_key_configured,
     anthropic: settings.post_processing.anthropic.api_key_configured,
-  } : { groq_llm: false, openai: false, anthropic: false };
+    custom_llm: settings.post_processing.custom_llm.api_key_configured,
+  } : { groq_llm: false, openai: false, anthropic: false, custom_llm: false };
   const canUseContexts = isFeatureAvailable('multi-context');
   const [editingContext, setEditingContext] = useState<TranscriptionContext | null>(null);
   const [showPresetPicker, setShowPresetPicker] = useState(false);

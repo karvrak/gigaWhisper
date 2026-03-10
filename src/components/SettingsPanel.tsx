@@ -341,7 +341,7 @@ export function SettingsPanel() {
                     ...settings,
                     transcription: {
                       ...settings.transcription,
-                      provider: e.target.value as 'local' | 'groq' | 'openai' | 'deepgram',
+                      provider: e.target.value as 'local' | 'groq' | 'openai' | 'deepgram' | 'custom',
                     },
                   })
                 }
@@ -357,12 +357,16 @@ export function SettingsPanel() {
                 <option value="deepgram">
                   Deepgram Nova{!settings.transcription.deepgram.api_key_configured ? ' (No API key)' : ''}
                 </option>
+                <option value="custom">
+                  Custom Endpoint{!settings.transcription.custom.api_key_configured ? ' (No API key)' : ''}
+                </option>
               </select>
-              {(settings.transcription.provider !== 'local' && !{
+              {(settings.transcription.provider !== 'local' && !({
                 groq: settings.transcription.groq.api_key_configured,
                 openai: settings.transcription.openai.api_key_configured,
                 deepgram: settings.transcription.deepgram.api_key_configured,
-              }[settings.transcription.provider]) && (
+                custom: settings.transcription.custom.api_key_configured,
+              } as Record<string, boolean>)[settings.transcription.provider]) && (
                 <p className="mt-1 text-xs text-red-500">
                   API key not configured. Please add your API key below before using this provider.
                 </p>
@@ -405,6 +409,119 @@ export function SettingsPanel() {
                 validateCommand="validate_deepgram_api_key_live"
                 onStatusChange={resetSettings}
               />
+            )}
+            {settings.transcription.provider === 'custom' && (
+              <>
+                <div>
+                  <label className="block text-xs font-medium mb-1">API URL</label>
+                  <input
+                    type="text"
+                    value={settings.transcription.custom.api_url}
+                    onChange={(e) =>
+                      updateSettings({
+                        ...settings,
+                        transcription: {
+                          ...settings.transcription,
+                          custom: { ...settings.transcription.custom, api_url: e.target.value },
+                        },
+                      })
+                    }
+                    placeholder="http://localhost:8080/v1/audio/transcriptions"
+                    className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Model</label>
+                  <input
+                    type="text"
+                    value={settings.transcription.custom.model}
+                    onChange={(e) =>
+                      updateSettings({
+                        ...settings,
+                        transcription: {
+                          ...settings.transcription,
+                          custom: { ...settings.transcription.custom, model: e.target.value },
+                        },
+                      })
+                    }
+                    placeholder="whisper-large-v3"
+                    className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Authentication Type</label>
+                  <select
+                    value={settings.transcription.custom.auth_type}
+                    onChange={(e) =>
+                      updateSettings({
+                        ...settings,
+                        transcription: {
+                          ...settings.transcription,
+                          custom: {
+                            ...settings.transcription.custom,
+                            auth_type: e.target.value as 'bearer' | 'x-api-key' | 'custom',
+                          },
+                        },
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
+                  >
+                    <option value="bearer">Bearer Token</option>
+                    <option value="x-api-key">x-api-key Header</option>
+                    <option value="custom">Custom Header</option>
+                  </select>
+                </div>
+                {settings.transcription.custom.auth_type === 'custom' && (
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Custom Header Name</label>
+                    <input
+                      type="text"
+                      value={settings.transcription.custom.custom_header_name}
+                      onChange={(e) =>
+                        updateSettings({
+                          ...settings,
+                          transcription: {
+                            ...settings.transcription,
+                            custom: { ...settings.transcription.custom, custom_header_name: e.target.value },
+                          },
+                        })
+                      }
+                      placeholder="X-My-Auth"
+                      className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="custom-transcription-invalid-certs"
+                    checked={settings.transcription.custom.accept_invalid_certs}
+                    onChange={(e) =>
+                      updateSettings({
+                        ...settings,
+                        transcription: {
+                          ...settings.transcription,
+                          custom: { ...settings.transcription.custom, accept_invalid_certs: e.target.checked },
+                        },
+                      })
+                    }
+                    className="rounded"
+                  />
+                  <label htmlFor="custom-transcription-invalid-certs" className="text-xs cursor-pointer">
+                    Accept self-signed certificates
+                  </label>
+                </div>
+                <ApiKeyInput
+                  provider="Custom"
+                  label="API Key"
+                  placeholder="Your API key"
+                  isConfigured={settings.transcription.custom.api_key_configured}
+                  setCommand="set_custom_transcription_api_key"
+                  clearCommand="clear_custom_transcription_api_key"
+                  validateCommand="validate_custom_transcription_api_key_live"
+                  onStatusChange={resetSettings}
+                />
+              </>
             )}
 
             {/* Whisper Model - only for local provider */}

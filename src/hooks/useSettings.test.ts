@@ -39,6 +39,15 @@ const mockSettings = {
       model: 'nova-2',
       timeout_seconds: 30,
     },
+    custom: {
+      api_key_configured: false,
+      api_url: '',
+      model: 'whisper-large-v3',
+      timeout_seconds: 30,
+      auth_type: 'bearer' as const,
+      custom_header_name: '',
+      accept_invalid_certs: false,
+    },
   },
   audio: {
     input_device: null,
@@ -104,6 +113,15 @@ const mockSettings = {
     },
     groq_llm: {
       model: 'llama-3.1-8b-instant',
+    },
+    custom_llm: {
+      api_key_configured: false,
+      api_url: '',
+      model: 'gpt-4o-mini',
+      timeout_seconds: 30,
+      auth_type: 'bearer' as const,
+      custom_header_name: '',
+      accept_invalid_certs: false,
     },
   },
 };

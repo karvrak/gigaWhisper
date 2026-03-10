@@ -14,7 +14,7 @@ interface Settings {
     settings: string;
   };
   transcription: {
-    provider: 'local' | 'groq' | 'openai' | 'deepgram';
+    provider: 'local' | 'groq' | 'openai' | 'deepgram' | 'custom';
     language: string;
     local: {
       model: 'tiny' | 'base' | 'small' | 'medium' | 'large';
@@ -35,6 +35,15 @@ interface Settings {
       api_key_configured: boolean;
       model: string;
       timeout_seconds: number;
+    };
+    custom: {
+      api_key_configured: boolean;
+      api_url: string;
+      model: string;
+      timeout_seconds: number;
+      auth_type: 'bearer' | 'x-api-key' | 'custom';
+      custom_header_name: string;
+      accept_invalid_certs: boolean;
     };
   };
   audio: {
@@ -81,7 +90,7 @@ interface Settings {
       model: string | null;
       post_processing: {
         enabled: boolean;
-        llm_provider: 'open-ai' | 'anthropic' | 'groq-llm';
+        llm_provider: 'open-ai' | 'anthropic' | 'groq-llm' | 'custom-llm';
         system_prompt: string;
       } | null;
       color: string | null;
@@ -92,7 +101,7 @@ interface Settings {
   };
   post_processing: {
     enabled: boolean;
-    default_provider: 'open-ai' | 'anthropic' | 'groq-llm';
+    default_provider: 'open-ai' | 'anthropic' | 'groq-llm' | 'custom-llm';
     default_prompt: string;
     remove_filler_words: boolean;
     openai: {
@@ -105,6 +114,15 @@ interface Settings {
     };
     groq_llm: {
       model: string;
+    };
+    custom_llm: {
+      api_key_configured: boolean;
+      api_url: string;
+      model: string;
+      timeout_seconds: number;
+      auth_type: 'bearer' | 'x-api-key' | 'custom';
+      custom_header_name: string;
+      accept_invalid_certs: boolean;
     };
   };
 }

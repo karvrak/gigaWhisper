@@ -10,6 +10,8 @@ const GROQ_API_KEY_NAME: &str = "groq_api_key";
 const OPENAI_API_KEY_NAME: &str = "openai_api_key";
 const DEEPGRAM_API_KEY_NAME: &str = "deepgram_api_key";
 const ANTHROPIC_API_KEY_NAME: &str = "anthropic_api_key";
+const CUSTOM_TRANSCRIPTION_API_KEY_NAME: &str = "custom_transcription_api_key";
+const CUSTOM_LLM_API_KEY_NAME: &str = "custom_llm_api_key";
 
 /// Errors related to secret storage
 #[derive(Debug, Error)]
@@ -222,6 +224,60 @@ impl SecretsManager {
         if !api_key.starts_with("sk-ant-") {
             return Err(SecretsError::InvalidFormat(
                 "Anthropic API key must start with 'sk-ant-'".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    // ── Custom Transcription ─────────────────────────────
+
+    pub fn set_custom_transcription_api_key(api_key: &str) -> Result<(), SecretsError> {
+        Self::validate_custom_api_key(api_key)?;
+        Self::set_secret(CUSTOM_TRANSCRIPTION_API_KEY_NAME, api_key.trim())
+    }
+
+    pub fn get_custom_transcription_api_key() -> Result<String, SecretsError> {
+        Self::get_secret(CUSTOM_TRANSCRIPTION_API_KEY_NAME)
+    }
+
+    pub fn delete_custom_transcription_api_key() -> Result<(), SecretsError> {
+        Self::delete_secret(CUSTOM_TRANSCRIPTION_API_KEY_NAME)
+    }
+
+    pub fn has_custom_transcription_api_key() -> bool {
+        Self::get_custom_transcription_api_key().is_ok()
+    }
+
+    // ── Custom LLM ──────────────────────────────────────
+
+    pub fn set_custom_llm_api_key(api_key: &str) -> Result<(), SecretsError> {
+        Self::validate_custom_api_key(api_key)?;
+        Self::set_secret(CUSTOM_LLM_API_KEY_NAME, api_key.trim())
+    }
+
+    pub fn get_custom_llm_api_key() -> Result<String, SecretsError> {
+        Self::get_secret(CUSTOM_LLM_API_KEY_NAME)
+    }
+
+    pub fn delete_custom_llm_api_key() -> Result<(), SecretsError> {
+        Self::delete_secret(CUSTOM_LLM_API_KEY_NAME)
+    }
+
+    pub fn has_custom_llm_api_key() -> bool {
+        Self::get_custom_llm_api_key().is_ok()
+    }
+
+    /// Validate custom API key — lightweight check (non-empty, max 500 chars)
+    pub fn validate_custom_api_key(api_key: &str) -> Result<(), SecretsError> {
+        let api_key = api_key.trim();
+        if api_key.is_empty() {
+            return Err(SecretsError::InvalidFormat(
+                "API key cannot be empty".to_string(),
+            ));
+        }
+        if api_key.len() > 500 {
+            return Err(SecretsError::InvalidFormat(
+                "API key is too long (max 500 characters)".to_string(),
             ));
         }
         Ok(())

@@ -375,6 +375,80 @@ pub async fn clear_anthropic_api_key(state: State<'_, AppState>) -> Result<(), S
     Ok(())
 }
 
+// ── Custom Transcription API Key ─────────────────────────
+
+#[tauri::command]
+pub async fn set_custom_transcription_api_key(
+    state: State<'_, AppState>,
+    api_key: String,
+) -> Result<(), String> {
+    SecretsManager::set_custom_transcription_api_key(&api_key).map_err(|e| e.to_string())?;
+    {
+        let mut config = state.config.write();
+        config.transcription.custom.api_key_configured = true;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("Custom transcription API key saved securely");
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn clear_custom_transcription_api_key(state: State<'_, AppState>) -> Result<(), String> {
+    let _ = SecretsManager::delete_custom_transcription_api_key();
+    {
+        let mut config = state.config.write();
+        config.transcription.custom.api_key_configured = false;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("Custom transcription API key removed");
+    Ok(())
+}
+
+/// Validate a custom transcription API key (format only, no live check)
+#[tauri::command]
+pub fn validate_custom_transcription_api_key_live(api_key: String) -> Result<(), String> {
+    SecretsManager::validate_custom_api_key(&api_key).map_err(|e| e.to_string())
+}
+
+// ── Custom LLM API Key ──────────────────────────────────
+
+#[tauri::command]
+pub async fn set_custom_llm_api_key(
+    state: State<'_, AppState>,
+    api_key: String,
+) -> Result<(), String> {
+    SecretsManager::set_custom_llm_api_key(&api_key).map_err(|e| e.to_string())?;
+    {
+        let mut config = state.config.write();
+        config.post_processing.custom_llm.api_key_configured = true;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("Custom LLM API key saved securely");
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn clear_custom_llm_api_key(state: State<'_, AppState>) -> Result<(), String> {
+    let _ = SecretsManager::delete_custom_llm_api_key();
+    {
+        let mut config = state.config.write();
+        config.post_processing.custom_llm.api_key_configured = false;
+    }
+    let config = state.config.read().clone();
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("Custom LLM API key removed");
+    Ok(())
+}
+
+/// Validate a custom LLM API key (format only, no live check)
+#[tauri::command]
+pub fn validate_custom_llm_api_key_live(api_key: String) -> Result<(), String> {
+    SecretsManager::validate_custom_api_key(&api_key).map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

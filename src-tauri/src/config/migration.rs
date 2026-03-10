@@ -206,6 +206,90 @@ impl Migration for MigrationV2ToV3 {
     }
 }
 
+/// Migration from schema v3 to v4: Add custom provider settings
+struct MigrationV3ToV4;
+
+impl Migration for MigrationV3ToV4 {
+    fn source_version(&self) -> u32 {
+        3
+    }
+
+    fn to_version(&self) -> u32 {
+        4
+    }
+
+    fn description(&self) -> &'static str {
+        "Add custom transcription and custom LLM provider settings"
+    }
+
+    fn migrate(&self, config: &mut toml::Value) -> Result<(), MigrationError> {
+        let table = config.as_table_mut().ok_or(MigrationError::InvalidConfig)?;
+
+        // Add custom section to transcription if missing
+        if let Some(toml::Value::Table(transcription)) = table.get_mut("transcription") {
+            if !transcription.contains_key("custom") {
+                let mut custom = toml::map::Map::new();
+                custom.insert(
+                    "api_key_configured".to_string(),
+                    toml::Value::Boolean(false),
+                );
+                custom.insert("api_url".to_string(), toml::Value::String(String::new()));
+                custom.insert(
+                    "model".to_string(),
+                    toml::Value::String("whisper-large-v3".to_string()),
+                );
+                custom.insert("timeout_seconds".to_string(), toml::Value::Integer(30));
+                custom.insert(
+                    "auth_type".to_string(),
+                    toml::Value::String("bearer".to_string()),
+                );
+                custom.insert(
+                    "custom_header_name".to_string(),
+                    toml::Value::String(String::new()),
+                );
+                custom.insert(
+                    "accept_invalid_certs".to_string(),
+                    toml::Value::Boolean(false),
+                );
+                transcription.insert("custom".to_string(), toml::Value::Table(custom));
+            }
+        }
+
+        // Add custom_llm section to post_processing if missing
+        if let Some(toml::Value::Table(pp)) = table.get_mut("post_processing") {
+            if !pp.contains_key("custom_llm") {
+                let mut custom_llm = toml::map::Map::new();
+                custom_llm.insert(
+                    "api_key_configured".to_string(),
+                    toml::Value::Boolean(false),
+                );
+                custom_llm.insert("api_url".to_string(), toml::Value::String(String::new()));
+                custom_llm.insert(
+                    "model".to_string(),
+                    toml::Value::String("gpt-4o-mini".to_string()),
+                );
+                custom_llm.insert("timeout_seconds".to_string(), toml::Value::Integer(30));
+                custom_llm.insert(
+                    "auth_type".to_string(),
+                    toml::Value::String("bearer".to_string()),
+                );
+                custom_llm.insert(
+                    "custom_header_name".to_string(),
+                    toml::Value::String(String::new()),
+                );
+                custom_llm.insert(
+                    "accept_invalid_certs".to_string(),
+                    toml::Value::Boolean(false),
+                );
+                pp.insert("custom_llm".to_string(), toml::Value::Table(custom_llm));
+            }
+        }
+
+        tracing::info!("Migrated config from v3 to v4: added custom provider settings");
+        Ok(())
+    }
+}
+
 /// Migration registry that holds all migrations
 pub struct MigrationRegistry {
     migrations: Vec<Box<dyn Migration>>,
@@ -215,7 +299,11 @@ impl MigrationRegistry {
     /// Create a new registry with all known migrations
     pub fn new() -> Self {
         Self {
-            migrations: vec![Box::new(MigrationV1ToV2), Box::new(MigrationV2ToV3)],
+            migrations: vec![
+                Box::new(MigrationV1ToV2),
+                Box::new(MigrationV2ToV3),
+                Box::new(MigrationV3ToV4),
+            ],
         }
     }
 

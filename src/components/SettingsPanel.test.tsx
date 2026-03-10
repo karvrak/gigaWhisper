@@ -44,6 +44,15 @@ const mockSettings = {
       timeout_seconds: 30,
       api_key_configured: false,
     },
+    custom: {
+      api_key_configured: false,
+      api_url: '',
+      model: 'whisper-large-v3',
+      timeout_seconds: 30,
+      auth_type: 'bearer' as const,
+      custom_header_name: '',
+      accept_invalid_certs: false,
+    },
   },
   audio: {
     input_device: null,

@@ -4,8 +4,8 @@
 //! Handles provider caching, status tracking, and shared logic.
 
 use super::{
-    DeepgramProvider, GroqProvider, OpenAiProvider, TranscriptionConfig, TranscriptionProvider,
-    TranscriptionResult, WhisperProvider,
+    CustomTranscriptionProvider, DeepgramProvider, GroqProvider, OpenAiProvider,
+    TranscriptionConfig, TranscriptionProvider, TranscriptionResult, WhisperProvider,
 };
 use crate::audio::{resample, VadAggressiveness, VadConfig, VoiceActivityDetector};
 use crate::config::{Settings, TranscriptionProvider as ConfigProvider};
@@ -84,6 +84,7 @@ impl TranscriptionService {
             ConfigProvider::Groq => "groq".to_string(),
             ConfigProvider::OpenAi => "openai".to_string(),
             ConfigProvider::Deepgram => "deepgram".to_string(),
+            ConfigProvider::Custom => "custom".to_string(),
         };
         status.model = format!("{:?}", config.transcription.local.model).to_lowercase();
 
@@ -224,6 +225,21 @@ impl TranscriptionService {
                 let provider = DeepgramProvider::with_timeout(
                     Some(config.transcription.deepgram.model.clone()),
                     config.transcription.deepgram.timeout_seconds as u64,
+                );
+                provider
+                    .transcribe(samples, &transcription_config)
+                    .await
+                    .map_err(|e| e.to_string())
+            }
+            ConfigProvider::Custom => {
+                let custom = &config.transcription.custom;
+                let provider = CustomTranscriptionProvider::new(
+                    custom.api_url.clone(),
+                    custom.model.clone(),
+                    custom.timeout_seconds as u64,
+                    custom.auth_type.clone(),
+                    custom.custom_header_name.clone(),
+                    custom.accept_invalid_certs,
                 );
                 provider
                     .transcribe(samples, &transcription_config)
@@ -526,6 +542,17 @@ impl TranscriptionService {
                 Some(config.post_processing.groq_llm.model.clone()),
                 self.http_client.clone(),
             )),
+            LlmProviderType::CustomLlm => {
+                let custom = &config.post_processing.custom_llm;
+                Box::new(crate::llm::CustomLlm::new(
+                    custom.api_url.clone(),
+                    custom.model.clone(),
+                    custom.timeout_seconds as u64,
+                    custom.auth_type.clone(),
+                    custom.custom_header_name.clone(),
+                    custom.accept_invalid_certs,
+                ))
+            }
         };
 
         let response = llm_provider
@@ -544,6 +571,9 @@ impl TranscriptionService {
             ConfigProvider::Groq => ("Groq", SecretsManager::get_groq_api_key()),
             ConfigProvider::OpenAi => ("OpenAI", SecretsManager::get_openai_api_key()),
             ConfigProvider::Deepgram => ("Deepgram", SecretsManager::get_deepgram_api_key()),
+            ConfigProvider::Custom => {
+                ("Custom", SecretsManager::get_custom_transcription_api_key())
+            }
         };
 
         match result {

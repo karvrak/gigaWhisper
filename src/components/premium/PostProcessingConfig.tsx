@@ -16,7 +16,8 @@ export function PostProcessingConfig() {
   const hasAnyLlmProvider =
     settings.transcription.groq.api_key_configured ||
     pp.openai.api_key_configured ||
-    pp.anthropic.api_key_configured;
+    pp.anthropic.api_key_configured ||
+    pp.custom_llm.api_key_configured;
 
   const updatePP = (updates: Partial<typeof pp>) => {
     updateSettings({
@@ -104,13 +105,16 @@ export function PostProcessingConfig() {
                 <label className="block text-xs font-medium mb-1">LLM Provider</label>
                 <select
                   value={pp.default_provider}
-                  onChange={(e) => updatePP({ default_provider: e.target.value as 'open-ai' | 'anthropic' | 'groq-llm' })}
+                  onChange={(e) => updatePP({ default_provider: e.target.value as 'open-ai' | 'anthropic' | 'groq-llm' | 'custom-llm' })}
                   disabled={!canUse}
                   className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
                 >
                   <option value="groq-llm">Groq (Llama - Fast)</option>
                   <option value="open-ai">OpenAI (GPT-4o-mini)</option>
                   <option value="anthropic">Anthropic (Claude Haiku)</option>
+                  <option value="custom-llm">
+                    Custom Endpoint{!pp.custom_llm.api_key_configured ? ' (No API key)' : ''}
+                  </option>
                 </select>
               </div>
 
@@ -145,6 +149,100 @@ export function PostProcessingConfig() {
                 <p className="text-xs text-content-secondary italic">
                   Groq uses the same API key as transcription (configured in Transcription settings).
                 </p>
+              )}
+
+              {pp.default_provider === 'custom-llm' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">API URL</label>
+                    <input
+                      type="text"
+                      value={pp.custom_llm.api_url}
+                      onChange={(e) =>
+                        updatePP({
+                          custom_llm: { ...pp.custom_llm, api_url: e.target.value },
+                        })
+                      }
+                      placeholder="http://localhost:11434/v1/chat/completions"
+                      className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Model</label>
+                    <input
+                      type="text"
+                      value={pp.custom_llm.model}
+                      onChange={(e) =>
+                        updatePP({
+                          custom_llm: { ...pp.custom_llm, model: e.target.value },
+                        })
+                      }
+                      placeholder="gpt-4o-mini"
+                      className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Authentication Type</label>
+                    <select
+                      value={pp.custom_llm.auth_type}
+                      onChange={(e) =>
+                        updatePP({
+                          custom_llm: {
+                            ...pp.custom_llm,
+                            auth_type: e.target.value as 'bearer' | 'x-api-key' | 'custom',
+                          },
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
+                    >
+                      <option value="bearer">Bearer Token</option>
+                      <option value="x-api-key">x-api-key Header</option>
+                      <option value="custom">Custom Header</option>
+                    </select>
+                  </div>
+                  {pp.custom_llm.auth_type === 'custom' && (
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Custom Header Name</label>
+                      <input
+                        type="text"
+                        value={pp.custom_llm.custom_header_name}
+                        onChange={(e) =>
+                          updatePP({
+                            custom_llm: { ...pp.custom_llm, custom_header_name: e.target.value },
+                          })
+                        }
+                        placeholder="X-My-Auth"
+                        className="w-full px-3 py-2 border border-edge rounded-md bg-surface-tertiary text-sm"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="custom-llm-invalid-certs"
+                      checked={pp.custom_llm.accept_invalid_certs}
+                      onChange={(e) =>
+                        updatePP({
+                          custom_llm: { ...pp.custom_llm, accept_invalid_certs: e.target.checked },
+                        })
+                      }
+                      className="rounded"
+                    />
+                    <label htmlFor="custom-llm-invalid-certs" className="text-xs cursor-pointer">
+                      Accept self-signed certificates
+                    </label>
+                  </div>
+                  <ApiKeyInput
+                    provider="Custom LLM"
+                    label="API Key"
+                    placeholder="Your API key"
+                    isConfigured={pp.custom_llm.api_key_configured}
+                    setCommand="set_custom_llm_api_key"
+                    clearCommand="clear_custom_llm_api_key"
+                    validateCommand="validate_custom_llm_api_key_live"
+                    onStatusChange={handleKeyStatusChange}
+                  />
+                </>
               )}
 
               <div>

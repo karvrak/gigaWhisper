@@ -20,14 +20,15 @@ export type PremiumFeature =
   | 'multi-context'
   | 'llm-post-processing'
   | 'openai-provider'
-  | 'deepgram-provider';
+  | 'deepgram-provider'
+  | 'custom-provider';
 
 export interface TranscriptionContext {
   id: string;
   name: string;
   shortcut: string;
   language: string;
-  provider: 'local' | 'groq' | 'openai' | 'deepgram';
+  provider: 'local' | 'groq' | 'openai' | 'deepgram' | 'custom';
   model: string | null;
   post_processing: ContextPostProcessing | null;
   color: string | null;
@@ -38,7 +39,7 @@ export interface TranscriptionContext {
 
 export interface ContextPostProcessing {
   enabled: boolean;
-  llm_provider: 'open-ai' | 'anthropic' | 'groq-llm';
+  llm_provider: 'open-ai' | 'anthropic' | 'groq-llm' | 'custom-llm';
   system_prompt: string;
 }
 

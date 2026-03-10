@@ -13,12 +13,14 @@ interface ProviderAvailability {
   groq: boolean;
   openai: boolean;
   deepgram: boolean;
+  custom: boolean;
 }
 
 interface LlmProviderAvailability {
   groq_llm: boolean;
   openai: boolean;
   anthropic: boolean;
+  custom_llm: boolean;
 }
 
 interface ContextEditorProps {
@@ -31,9 +33,9 @@ interface ContextEditorProps {
 }
 
 export function ContextEditor({ context, onSave, onCancel, providerAvailability, llmProviderAvailability, onNavigateToProviders }: ContextEditorProps) {
-  const pa = providerAvailability ?? { groq: true, openai: true, deepgram: true };
-  const llmPa = llmProviderAvailability ?? { groq_llm: false, openai: false, anthropic: false };
-  const hasAnyLlmProvider = llmPa.groq_llm || llmPa.openai || llmPa.anthropic;
+  const pa = providerAvailability ?? { groq: true, openai: true, deepgram: true, custom: true };
+  const llmPa = llmProviderAvailability ?? { groq_llm: false, openai: false, anthropic: false, custom_llm: false };
+  const hasAnyLlmProvider = llmPa.groq_llm || llmPa.openai || llmPa.anthropic || llmPa.custom_llm;
   const [ctx, setCtx] = useState(context);
   const [saving, setSaving] = useState(false);
 
@@ -162,6 +164,9 @@ export function ContextEditor({ context, onSave, onCancel, providerAvailability,
             </option>
             <option value="deepgram" disabled={!pa.deepgram}>
               Deepgram Nova{!pa.deepgram ? ' (No API key)' : ''}
+            </option>
+            <option value="custom" disabled={!pa.custom}>
+              Custom Endpoint{!pa.custom ? ' (No API key)' : ''}
             </option>
           </select>
         </div>
@@ -367,6 +372,9 @@ export function ContextEditor({ context, onSave, onCancel, providerAvailability,
                       </option>
                       <option value="anthropic" disabled={!llmPa.anthropic}>
                         Anthropic (Claude Haiku){!llmPa.anthropic ? ' (No API key)' : ''}
+                      </option>
+                      <option value="custom-llm" disabled={!llmPa.custom_llm}>
+                        Custom Endpoint{!llmPa.custom_llm ? ' (No API key)' : ''}
                       </option>
                     </select>
                   </div>
