@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.16] - 2026-03-12
+
+### Changed
+- Version bump to 1.0.16
+
+## [1.0.15] - 2026-03-09
+
+### Added
+- **Temporary context overrides** — apply context presets temporarily for a single recording session
+- **Auto-switch context at recording start** — automatically switch to the appropriate context when recording begins
+
+### Fixed
+- Sync API key flags between settings and transcription providers
+
+## [1.0.14] - 2026-03-09
+
+### Added
+- **Single executable build** — streamlined distribution with single .exe output
+- **Context editor enhancements** — improved UI for managing context presets
+
+### Changed
+- Improved transcription service reliability and error handling
+
+## [1.0.13] - 2026-03-09
+
+### Added
+- **Whisper model preloading** — model is loaded at startup for faster first transcription
+- Auto-start and auto-update enabled by default for new installations
+
+### Fixed
+- License API URL updated to gigawhisper.com
+- CI build fixes
+- Cargo fmt formatting in premium module
+- Premium state event emission on license activation/deactivation
+
+## [1.0.11] - 2026-03-07
+
+### Added
+- **Context presets** — predefined contexts for different transcription scenarios
+- **Post-processing UI** — new interface for configuring text post-processing rules
+- Updated signing public key for auto-updates
+
+### Fixed
+- Updater artifact generation with `createUpdaterArtifacts`
+- Replaced tauri-action with direct build and artifact verification
+- NSIS updater bundle signature format (`.nsis.zip.sig`)
+- Release workflow made idempotent on re-runs
+
 ## [1.0.10] - 2026-03-07
 
 ### Fixed
@@ -154,7 +202,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Force x86-64-v2 CPU target for compatibility
 - CUDA build fixes (cublas packages, visual_studio_integration)
 
-[Unreleased]: https://github.com/karvrak/gigaWhisper/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/karvrak/gigaWhisper/compare/v1.0.16...HEAD
+[1.0.16]: https://github.com/karvrak/gigaWhisper/compare/v1.0.15...v1.0.16
+[1.0.15]: https://github.com/karvrak/gigaWhisper/compare/v1.0.14...v1.0.15
+[1.0.14]: https://github.com/karvrak/gigaWhisper/compare/v1.0.13...v1.0.14
+[1.0.13]: https://github.com/karvrak/gigaWhisper/compare/v1.0.11...v1.0.13
+[1.0.11]: https://github.com/karvrak/gigaWhisper/compare/v1.0.10...v1.0.11
+[1.0.10]: https://github.com/karvrak/gigaWhisper/compare/v1.0.9...v1.0.10
+[1.0.9]: https://github.com/karvrak/gigaWhisper/compare/v1.0.7...v1.0.9
+[1.0.7]: https://github.com/karvrak/gigaWhisper/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/karvrak/gigaWhisper/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/karvrak/gigaWhisper/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/karvrak/gigaWhisper/compare/v1.0.3...v1.0.4
