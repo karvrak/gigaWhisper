@@ -558,10 +558,7 @@ fn show_recording_indicator(app: &AppHandle, context_override: Option<&str>) {
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_millis(50));
                 if let Err(e2) = window_retry.show() {
-                    tracing::error!(
-                        "Retry: Failed to show recording indicator: {}",
-                        e2
-                    );
+                    tracing::error!("Retry: Failed to show recording indicator: {}", e2);
                 }
             });
         }
