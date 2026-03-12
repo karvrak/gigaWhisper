@@ -550,16 +550,42 @@ fn show_recording_indicator(app: &AppHandle, context_override: Option<&str>) {
     if let Some(window) = app.get_webview_window("recording-indicator") {
         // Ensure the overlay never captures mouse clicks
         let _ = window.set_ignore_cursor_events(true);
-        let _ = window.show();
 
+        // Show the window with error logging and retry
+        if let Err(e) = window.show() {
+            tracing::error!("Failed to show recording indicator: {}", e);
+            let window_retry = window.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+                if let Err(e2) = window_retry.show() {
+                    tracing::error!(
+                        "Retry: Failed to show recording indicator: {}",
+                        e2
+                    );
+                }
+            });
+        }
+
+        // Send events with enough delay for the webview to be ready.
+        // Emit twice with a gap to guard against the JS listeners not being
+        // wired up in time (e.g. first show after a long hide).
         let window_clone = window.clone();
         let color = context_color.clone();
         std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(50));
+            // First attempt after 100ms
+            std::thread::sleep(std::time::Duration::from_millis(100));
             let _ = window_clone.emit("recording:state-changed", "recording");
-            // Send context color to indicator
-            if let Some(c) = color {
-                let _ = window_clone.emit("indicator:context-color", c);
+            if let Some(ref c) = color {
+                let _ = window_clone.emit("indicator:context-color", c.clone());
+            } else {
+                let _ = window_clone.emit("indicator:context-color", "");
+            }
+
+            // Second attempt after another 150ms as safety net
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            let _ = window_clone.emit("recording:state-changed", "recording");
+            if let Some(ref c) = color {
+                let _ = window_clone.emit("indicator:context-color", c.clone());
             } else {
                 let _ = window_clone.emit("indicator:context-color", "");
             }

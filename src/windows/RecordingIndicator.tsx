@@ -36,6 +36,13 @@ export function RecordingIndicatorWindow() {
 
   // Listen for state changes from backend
   useEffect(() => {
+    // Start timer immediately on mount -- the window is only shown when
+    // recording begins, so we don't need to wait for an event.  This
+    // guarantees the indicator is active even if the first backend event
+    // arrives before the JS listeners are wired up.
+    startTimer();
+    setState('recording');
+
     // Listen for all state changes
     const unsubStateChanged = listen<string>('recording:state-changed', (event) => {
       const newState = event.payload;
