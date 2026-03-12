@@ -108,7 +108,10 @@ fn handle_record_shortcut(
 ) {
     // context_id is a temporary override for this recording only - do NOT persist it
     if let Some(ref ctx_id) = context_id {
-        tracing::info!("Context shortcut triggered with temporary override: '{}'", ctx_id);
+        tracing::info!(
+            "Context shortcut triggered with temporary override: '{}'",
+            ctx_id
+        );
     }
 
     let state = app.state::<AppState>();
