@@ -551,44 +551,65 @@ fn show_recording_indicator(app: &AppHandle, context_override: Option<&str>) {
         // Ensure the overlay never captures mouse clicks
         let _ = window.set_ignore_cursor_events(true);
 
-        // Show the window with error logging and retry
-        if let Err(e) = window.show() {
-            tracing::error!("Failed to show recording indicator: {}", e);
-            let window_retry = window.clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(std::time::Duration::from_millis(50));
-                if let Err(e2) = window_retry.show() {
-                    tracing::error!("Retry: Failed to show recording indicator: {}", e2);
-                }
-            });
-        }
-
-        // Send events with enough delay for the webview to be ready.
-        // Emit twice with a gap to guard against the JS listeners not being
-        // wired up in time (e.g. first show after a long hide).
-        let window_clone = window.clone();
+        // Clone window for the spawned thread
+        let window_for_show = window.clone();
         let color = context_color.clone();
+
+        // Spawn a dedicated thread to handle showing the window with retries
+        // This ensures the window is shown reliably even if the first attempt fails
         std::thread::spawn(move || {
-            // First attempt after 100ms
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            let _ = window_clone.emit("recording:state-changed", "recording");
-            if let Some(ref c) = color {
-                let _ = window_clone.emit("indicator:context-color", c.clone());
+            // Attempt 1: Show immediately
+            let mut shown = false;
+            if let Err(e) = window_for_show.show() {
+                tracing::error!("Failed to show recording indicator (attempt 1): {}", e);
             } else {
-                let _ = window_clone.emit("indicator:context-color", "");
+                shown = true;
             }
 
-            // Second attempt after another 150ms as safety net
-            std::thread::sleep(std::time::Duration::from_millis(150));
-            let _ = window_clone.emit("recording:state-changed", "recording");
-            if let Some(ref c) = color {
-                let _ = window_clone.emit("indicator:context-color", c.clone());
-            } else {
-                let _ = window_clone.emit("indicator:context-color", "");
+            // Small delay to let the window initialize
+            std::thread::sleep(std::time::Duration::from_millis(30));
+
+            // Attempt 2: Retry show if first failed, and ensure window is on top
+            if !shown {
+                if let Err(e) = window_for_show.show() {
+                    tracing::error!("Failed to show recording indicator (attempt 2): {}", e);
+                }
             }
+
+            // Always try to bring window to front to ensure visibility
+            // This helps when the window was already "shown" but not visible
+            let _ = window_for_show.set_always_on_top(true);
+
+            // First event emission after 50ms
+            std::thread::sleep(std::time::Duration::from_millis(50));
+            let _ = window_for_show.emit("recording:state-changed", "recording");
+            if let Some(ref c) = color {
+                let _ = window_for_show.emit("indicator:context-color", c.clone());
+            } else {
+                let _ = window_for_show.emit("indicator:context-color", "");
+            }
+
+            // Attempt 3: Another show to ensure visibility without stealing focus
+            // Note: We avoid set_focus() as it would steal focus from the user's active window
+            let _ = window_for_show.show();
+
+            // Second event emission after another 100ms as safety net
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            let _ = window_for_show.emit("recording:state-changed", "recording");
+            if let Some(ref c) = color {
+                let _ = window_for_show.emit("indicator:context-color", c.clone());
+            } else {
+                let _ = window_for_show.emit("indicator:context-color", "");
+            }
+
+            // Final attempt after another 150ms for edge cases
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            let _ = window_for_show.emit("recording:state-changed", "recording");
+
+            tracing::debug!("Recording indicator show sequence completed");
         });
 
-        tracing::debug!("Recording indicator shown");
+        tracing::debug!("Recording indicator show initiated");
     } else {
         tracing::warn!("Recording indicator window not found");
     }
