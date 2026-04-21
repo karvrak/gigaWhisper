@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.17] - 2026-04-21
+
+### Fixed
+- **Constant idle GPU usage** — GigaWhisper no longer keeps the GPU busy while minimized or idle. Two underlying causes were addressed:
+  - The Whisper model was loaded eagerly at startup and stayed resident in VRAM forever; it is now loaded lazily on the first shortcut press and unloaded after an idle timeout (default 30 seconds, configurable via `idle_unload_after_seconds`; set to `0` to keep the old always-resident behavior).
+  - The WebView2 main window kept compositing on the GPU even when minimized to the tray. The webview is now destroyed on close/minimize (and recreated on demand when the tray is clicked), and WebView2 GPU compositing / Skia renderer are disabled via `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`. A new `keep_webview_alive` setting (default `false`) lets users opt back into the previous behavior for faster window re-open at the cost of idle GPU usage.
+
+### Added
+- `transcription.local.idle_unload_after_seconds` setting — unload the local Whisper model after this many seconds of inactivity (default: 30, `0` disables)
+- `ui.keep_webview_alive` setting — when `true`, the main window is hidden instead of destroyed on close/minimize (default: `false`)
+
 ## [1.0.16] - 2026-04-21
 
 ### Fixed

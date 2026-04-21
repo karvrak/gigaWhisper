@@ -388,6 +388,14 @@ pub struct LocalTranscriptionSettings {
     pub gpu_enabled: bool,
     /// GPU backend to use when gpu_enabled is true
     pub gpu_backend: GpuBackend,
+    /// Unload the model after this many seconds of idle time. `0` disables
+    /// idle unloading (model stays resident after first load / startup preload).
+    #[serde(default = "default_idle_unload_after_seconds")]
+    pub idle_unload_after_seconds: u64,
+}
+
+fn default_idle_unload_after_seconds() -> u64 {
+    30
 }
 
 impl Default for LocalTranscriptionSettings {
@@ -398,6 +406,7 @@ impl Default for LocalTranscriptionSettings {
             threads: 0, // Auto-detect
             gpu_enabled: true,
             gpu_backend: GpuBackend::Vulkan,
+            idle_unload_after_seconds: default_idle_unload_after_seconds(),
         }
     }
 }
@@ -736,6 +745,11 @@ pub struct UiSettings {
     pub auto_start: bool,
     /// Minimize to tray instead of taskbar
     pub minimize_to_tray: bool,
+    /// Keep the WebView2 process alive when minimized to tray.
+    /// Default `false` destroys the webview to release GPU/CPU resources; enable
+    /// for faster window re-open at the cost of constant idle GPU usage.
+    #[serde(default)]
+    pub keep_webview_alive: bool,
     /// Automatically install updates without prompting
     #[serde(default)]
     pub auto_update: bool,
@@ -753,6 +767,7 @@ impl Default for UiSettings {
             start_minimized: false,
             auto_start: true,
             minimize_to_tray: true,
+            keep_webview_alive: false,
             auto_update: true,
             custom_theme: None,
         }

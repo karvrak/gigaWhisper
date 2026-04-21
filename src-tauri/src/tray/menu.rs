@@ -5,7 +5,6 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconEvent},
-    Manager,
 };
 
 /// Setup system tray
@@ -38,10 +37,10 @@ pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             ..
         } = event
         {
-            // Show main window on left click
-            if let Some(window) = tray.app_handle().get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.set_focus();
+            // Show main window on left click, recreating it if it was destroyed
+            // on minimize-to-tray.
+            if let Err(e) = crate::show_or_recreate_main_window(tray.app_handle()) {
+                tracing::error!("Failed to show main window from tray: {}", e);
             }
         }
     });
@@ -54,9 +53,8 @@ pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 fn handle_menu_event(app: &tauri::AppHandle, item_id: &str) {
     match item_id {
         "show" => {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.set_focus();
+            if let Err(e) = crate::show_or_recreate_main_window(app) {
+                tracing::error!("Failed to show main window: {}", e);
             }
         }
         "quit" => {

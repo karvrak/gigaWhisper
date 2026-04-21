@@ -19,9 +19,35 @@ pub mod utils;
 
 use parking_lot::Mutex;
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
+
+/// Recreate the main window using the same attributes as declared in `tauri.conf.json`.
+/// Used when the webview was destroyed on minimize-to-tray to release GPU resources.
+pub fn recreate_main_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
+    WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+        .title("GigaWhisper")
+        .inner_size(400.0, 600.0)
+        .min_inner_size(350.0, 500.0)
+        .resizable(true)
+        .decorations(true)
+        .transparent(false)
+        .center()
+        .visible(false)
+        .build()
+}
+
+/// Show the main window, recreating it if it has been destroyed.
+pub fn show_or_recreate_main_window(app: &AppHandle) -> tauri::Result<()> {
+    let window = match app.get_webview_window("main") {
+        Some(w) => w,
+        None => recreate_main_window(app)?,
+    };
+    window.show()?;
+    window.set_focus()?;
+    Ok(())
+}
 
 /// Application state shared across all components
 pub struct AppState {
@@ -109,6 +135,13 @@ fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
 /// Initialize and run the Tauri application
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Disable WebView2 GPU compositing to eliminate idle GPU load while minimized.
+    // Must be set before the WebView2 process starts (before tauri::Builder::default()).
+    std::env::set_var(
+        "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+        "--disable-gpu-compositing --disable-features=UseSkiaRenderer",
+    );
+
     // Initialize logging - keep guard alive for the duration of the application
     let _log_guard = init_logging();
 
@@ -166,7 +199,15 @@ pub fn run() {
 
             if let Some(window) = app.get_webview_window("main") {
                 if should_start_minimized {
-                    window.hide()?;
+                    // Destroy the pre-created (hidden) webview so it doesn't consume
+                    // GPU/CPU while the app lives in the tray. It will be recreated
+                    // on demand via `recreate_main_window`.
+                    let keep_alive = state.config.read().ui.keep_webview_alive;
+                    if keep_alive {
+                        window.hide()?;
+                    } else {
+                        window.destroy()?;
+                    }
                 } else {
                     window.show()?;
                     window.set_focus()?;
@@ -195,17 +236,20 @@ pub fn run() {
                 );
             }
 
-            // Preload Whisper model in background for faster first transcription (GPU warmup)
+            // Preload Whisper model at startup only when the user has disabled idle
+            // unloading (`idle_unload_after_seconds == 0`). Otherwise the model is
+            // loaded lazily on shortcut press and unloaded after idle timeout.
             {
-                let service = state.transcription_service.clone();
                 let preload_config = state.config.read().clone();
-                tauri::async_runtime::spawn(async move {
-                    // Small delay to not block UI startup
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                    if let Err(e) = service.preload_model(&preload_config) {
-                        tracing::warn!("Failed to preload transcription model: {}", e);
-                    }
-                });
+                if preload_config.transcription.local.idle_unload_after_seconds == 0 {
+                    let service = state.transcription_service.clone();
+                    tauri::async_runtime::spawn(async move {
+                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                        if let Err(e) = service.preload_model(&preload_config) {
+                            tracing::warn!("Failed to preload transcription model: {}", e);
+                        }
+                    });
+                }
             }
 
             // Check for updates in the background
@@ -221,14 +265,26 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Hide main window instead of closing it (keep app in tray)
+            // Keep app alive in tray when user closes the main window.
+            // Destroying the webview (vs hiding) releases the WebView2 GPU/CPU
+            // resources; it is recreated on demand when the user clicks the tray.
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    // Prevent the window from being destroyed
                     api.prevent_close();
-                    // Hide the window instead
-                    let _ = window.hide();
-                    tracing::debug!("Main window hidden (not closed)");
+                    let keep_alive = window
+                        .app_handle()
+                        .state::<AppState>()
+                        .config
+                        .read()
+                        .ui
+                        .keep_webview_alive;
+                    if keep_alive {
+                        let _ = window.hide();
+                        tracing::debug!("Main window hidden (keep_webview_alive=true)");
+                    } else {
+                        let _ = window.destroy();
+                        tracing::debug!("Main window destroyed (will recreate on demand)");
+                    }
                 }
             }
         })

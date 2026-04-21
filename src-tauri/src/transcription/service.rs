@@ -12,10 +12,11 @@ use crate::config::{Settings, TranscriptionProvider as ConfigProvider};
 use crate::llm::{LlmProvider, LlmRequest};
 use crate::output;
 use crate::utils::{metrics, TranscriptionRecord};
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
+use tokio::task::JoinHandle;
 
 /// Transcription status information
 #[derive(Debug, Clone, serde::Serialize)]
@@ -59,6 +60,12 @@ pub struct TranscriptionService {
     status: RwLock<TranscriptionStatus>,
     /// Shared HTTP client for LLM providers
     http_client: reqwest::Client,
+    /// Pending idle-unload timer. Aborted when a new recording starts so the
+    /// model isn't dropped between the shortcut press and transcription.
+    pending_unload: Mutex<Option<JoinHandle<()>>>,
+    /// In-flight preload task, shared so concurrent callers of
+    /// `ensure_load_started` don't spawn duplicate loads.
+    pending_load: Mutex<Option<Arc<JoinHandle<()>>>>,
 }
 
 impl TranscriptionService {
@@ -68,6 +75,8 @@ impl TranscriptionService {
             cached_whisper: RwLock::new(None),
             status: RwLock::new(TranscriptionStatus::default()),
             http_client: reqwest::Client::new(),
+            pending_unload: Mutex::new(None),
+            pending_load: Mutex::new(None),
         }
     }
 
@@ -164,6 +173,73 @@ impl TranscriptionService {
 
         let mut status = self.status.write();
         status.model_loaded = false;
+    }
+
+    /// Cancel any pending idle-unload timer.
+    /// Called on shortcut press so the model isn't dropped mid-recording.
+    pub fn cancel_scheduled_unload(&self) {
+        if let Some(handle) = self.pending_unload.lock().take() {
+            handle.abort();
+            tracing::debug!("Cancelled pending model unload");
+        }
+    }
+
+    /// Schedule the model to be unloaded after `secs` seconds of idle time.
+    /// `secs == 0` disables unloading. Replaces any previously scheduled timer.
+    pub fn schedule_unload_after(self: &Arc<Self>, secs: u64) {
+        if secs == 0 {
+            self.cancel_scheduled_unload();
+            return;
+        }
+
+        let service = Arc::clone(self);
+        let handle = tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
+            service.unload_model();
+            tracing::info!("Model unloaded after {}s idle timeout", secs);
+            // Clear the handle slot so a later call won't try to abort a finished task
+            *service.pending_unload.lock() = None;
+        });
+
+        let mut slot = self.pending_unload.lock();
+        if let Some(old) = slot.replace(handle) {
+            old.abort();
+        }
+    }
+
+    /// Fire-and-forget: ensure the local model is loaded, starting a load task
+    /// if none is in flight. Idempotent: concurrent callers share the same task.
+    pub async fn ensure_load_started(self: &Arc<Self>, config: &Settings) {
+        if config.transcription.provider != ConfigProvider::Local {
+            return;
+        }
+
+        // Already loaded: nothing to do.
+        {
+            let cached = self.cached_whisper.read();
+            if let Some(c) = cached.as_ref() {
+                if c.provider.is_model_loaded() {
+                    return;
+                }
+            }
+        }
+
+        // Reuse an in-flight load if present; otherwise atomically claim the slot.
+        let mut slot = self.pending_load.lock();
+        if slot.is_some() {
+            return;
+        }
+
+        let service = Arc::clone(self);
+        let cfg = config.clone();
+        let handle = tokio::spawn(async move {
+            if let Err(e) = service.preload_model(&cfg) {
+                tracing::warn!("Background model preload failed: {}", e);
+            }
+            *service.pending_load.lock() = None;
+        });
+
+        *slot = Some(Arc::new(handle));
     }
 
     /// Perform transcription with the configured provider
@@ -398,6 +474,12 @@ impl TranscriptionService {
 
         // Perform transcription
         let result = self.transcribe(&samples_for_transcription, &config).await;
+
+        // Schedule idle unload of the local model (no-op for cloud providers
+        // or when the setting is 0).
+        if config.transcription.provider == ConfigProvider::Local {
+            self.schedule_unload_after(config.transcription.local.idle_unload_after_seconds);
+        }
 
         match result {
             Ok(transcription) => {
