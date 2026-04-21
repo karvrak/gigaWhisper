@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.16] - 2026-03-12
+## [1.0.16] - 2026-04-21
+
+### Fixed
+- **Recording indicator not showing on shortcut press** — the recording overlay window sometimes failed to appear when triggering a recording via the global shortcut. Root causes addressed:
+  - `window.show()` errors were silently swallowed; they are now logged and a retry is attempted if the first `show()` fails
+  - Event emission to the webview (`recording:state-changed`, `indicator:context-color`) was racing with listener registration; emission delay increased from 50ms to 100ms with a second attempt at 250ms as a safety net
+  - The recording timer now starts immediately on component mount instead of waiting for the backend event, guaranteeing the indicator is live even if the first event arrives before JS listeners are wired up
 
 ### Changed
-- Version bump to 1.0.16
+- CI: added Vulkan SDK setup for Windows jobs; Vulkan disabled on Ubuntu coverage job to avoid unsupported backend errors
 
 ## [1.0.15] - 2026-03-09
 
